@@ -91,6 +91,7 @@ export default function Dashboard() {
   // Load assumptions from Supabase on mount
   useEffect(() => {
     async function load() {
+      if (!supabase) { setLoaded(true); return; }
       try {
         const { data } = await supabase.from("assumptions").select("key, value");
         if (data && data.length > 0) {
@@ -110,6 +111,7 @@ export default function Dashboard() {
 
   // Subscribe to real-time changes
   useEffect(() => {
+    if (!supabase) return;
     const channel = supabase
       .channel("assumptions-changes")
       .on(
@@ -131,6 +133,7 @@ export default function Dashboard() {
 
   // Persist a single key to Supabase (debounced)
   const persistKey = useCallback((key: string, value: number) => {
+    if (!supabase) return;
     if (saveTimers.current[key]) clearTimeout(saveTimers.current[key]);
     saveTimers.current[key] = setTimeout(async () => {
       try {
