@@ -51,15 +51,19 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
 
-    const { error } = await supabase!.auth.signInWithOtp({
-      email: trimmed,
-      options: { emailRedirectTo: window.location.origin },
-    });
+    try {
+      const { error } = await supabase!.auth.signInWithOtp({
+        email: trimmed,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setSent(true);
+      if (error) {
+        setError(error.message);
+      } else {
+        setSent(true);
+      }
+    } catch (err) {
+      setError(`Network error: ${err instanceof Error ? err.message : "check Supabase connection"}`);
     }
   }
 
