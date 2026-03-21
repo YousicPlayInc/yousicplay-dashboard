@@ -2,10 +2,15 @@
 
 import React from "react";
 
-export function Card({ title, children }: { title?: string; children: React.ReactNode }) {
+export function Card({ title, children, action }: { title?: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-4">
-      {title && <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">{title}</h3>}
+      {(title || action) && (
+        <div className="flex items-center justify-between mb-3">
+          {title && <h3 className="text-sm font-semibold text-white uppercase tracking-wide">{title}</h3>}
+          {action}
+        </div>
+      )}
       {children}
     </div>
   );
@@ -121,16 +126,48 @@ export function RemoveButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-export function StatusBadge({ status }: { status: string }) {
-  const s: Record<string, string> = {
-    hit: "bg-blue-400/20 text-emerald-400",
-    on_track: "bg-blue-500/20 text-white",
-    at_risk: "bg-yellow-500/20 text-yellow-400",
-    miss: "bg-red-500/20 text-red-400",
-  };
+export function EditToggle({ editing, onToggle }: { editing: boolean; onToggle: () => void }) {
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s[status] || s.on_track}`}>
+    <button
+      onClick={onToggle}
+      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+        editing
+          ? "bg-amber-400/20 text-amber-400 border border-amber-400/30"
+          : "bg-slate-700/50 text-slate-400 border border-slate-600 hover:text-white"
+      }`}
+    >
+      {editing ? "Done" : "Edit"}
+    </button>
+  );
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  hit: "bg-blue-400/20 text-emerald-400",
+  on_track: "bg-blue-500/20 text-white",
+  at_risk: "bg-yellow-500/20 text-yellow-400",
+  miss: "bg-red-500/20 text-red-400",
+};
+
+const STATUS_OPTIONS = ["on_track", "at_risk", "hit", "miss"] as const;
+
+export function StatusBadge({ status }: { status: string }) {
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[status] || STATUS_STYLES.on_track}`}>
       {status.replace("_", " ")}
     </span>
+  );
+}
+
+export function StatusSelect({ value, onChange }: { value: string; onChange: (val: string) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="bg-slate-950 border border-slate-600 rounded px-2 py-1 text-xs font-medium text-amber-400 outline-none cursor-pointer"
+    >
+      {STATUS_OPTIONS.map((s) => (
+        <option key={s} value={s}>{s.replace("_", " ")}</option>
+      ))}
+    </select>
   );
 }

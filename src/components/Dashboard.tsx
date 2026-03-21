@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { DEFAULT_ASSUMPTIONS, SCALAR_KEYS, fromSupabaseRows, type Assumptions, type FounderConfig, type AgentConfig, type PartnershipConfig, type PhaseConfig, type GtmMotion, type ChannelAllocation } from "@/lib/defaults";
 import { computeAll } from "@/lib/calculations";
 import { currency, pct, num } from "@/lib/format";
-import { Card, Metric, Input, TextInput, AddButton, RemoveButton, StatusBadge } from "@/components/ui";
+import { Card, Metric, Input, TextInput, AddButton, RemoveButton, EditToggle, StatusBadge, StatusSelect } from "@/components/ui";
 
 const TABS = [
   "Inflection Points",
@@ -26,7 +26,9 @@ export default function Dashboard() {
   const [tab, setTab] = useState(0);
   const [a, setA] = useState<Assumptions>(JSON.parse(JSON.stringify(DEFAULT_ASSUMPTIONS)));
   const [loaded, setLoaded] = useState(false);
+  const [editing, setEditing] = useState<Record<string, boolean>>({});
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const toggleEdit = (key: string) => setEditing(prev => ({ ...prev, [key]: !prev[key] }));
 
   // ─── Supabase Load ─────────────────────────────────────────────────
   useEffect(() => {
@@ -135,13 +137,13 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-900/40 to-slate-900 border-b border-slate-700 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <div className="bg-gradient-to-r from-slate-900 via-blue-900/40 to-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Yousic Play</h1>
-            <p className="text-sm text-slate-400">Pre-Seed Financial Model &amp; Launch Dashboard</p>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Yousic Play</h1>
+            <p className="text-xs sm:text-sm text-slate-400">Pre-Seed Financial Model &amp; Launch Dashboard</p>
           </div>
-          <div className="flex gap-4 text-center">
+          <div className="grid grid-cols-4 gap-3 sm:gap-4 text-center">
             <Metric label="Raise" value={currency(a.raise)} />
             <Metric label="18-Mo ARR" value={currency(calc.arrM18)} good />
             <Metric label="Agents" value={calc.totalAgents} />
@@ -151,22 +153,22 @@ export default function Dashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-slate-700 bg-slate-800/50 overflow-x-auto">
+      <div className="border-b border-slate-700 bg-slate-800/50 overflow-x-auto scrollbar-hide">
         <div className="max-w-7xl mx-auto flex">
           {TABS.map((t, i) => (
-            <button key={i} onClick={() => setTab(i)} className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${tab === i ? "border-blue-500 text-white" : "border-transparent text-slate-400 hover:text-slate-200"}`}>{t}</button>
+            <button key={i} onClick={() => setTab(i)} className={`px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${tab === i ? "border-blue-500 text-white" : "border-transparent text-slate-400 hover:text-slate-200"}`}>{t}</button>
           ))}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-3 sm:p-6">
 
         {/* ═══ TAB 0: INFLECTION POINTS ═══ */}
         {tab === 0 && (
           <div className="space-y-6">
             <Card title="Pricing Tiers">
               <p className="text-xs text-slate-400 mb-3">14-day full Pro trial on signup. No payment upfront.</p>
-              <div className="grid grid-cols-4 gap-3 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <div className="bg-slate-800 rounded-lg p-3 border border-slate-600">
                   <p className="text-xs text-slate-400 uppercase tracking-wide">Guest</p>
                   <p className="text-lg font-bold font-mono text-white mt-1">No account</p>
@@ -196,7 +198,7 @@ export default function Dashboard() {
                   <p className="text-xs text-slate-400 mt-2">Community + performance layer</p>
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-3 text-xs text-slate-400 bg-slate-800/50 rounded p-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-slate-400 bg-slate-800/50 rounded p-3">
                 <div><span className="block">Blended ARPU (M6)</span><span className="text-white font-mono">${calc.blendedArpuM6?.toFixed(2)}/mo</span></div>
                 <div><span className="block">Blended ARPU (M12)</span><span className="text-white font-mono">${calc.blendedArpuM12?.toFixed(2)}/mo</span></div>
                 <div><span className="block">Blended ARPU (M18)</span><span className="text-white font-mono">${calc.blendedArpuM18?.toFixed(2)}/mo</span></div>
@@ -219,7 +221,7 @@ export default function Dashboard() {
 
             <Card title="Derived User Growth (from marketing channels)">
               <p className="text-xs text-slate-400 mb-3">Calculated from channel budgets, CPAs, and viral amplification. Edit on the Marketing &amp; Growth tab.</p>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {calc.phases.map((p, i) => (
                   <div key={i} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
                     <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">{p.label}</p>
@@ -239,7 +241,7 @@ export default function Dashboard() {
 
             <Card title="AI Consumer Benchmarks (2025-2026)">
               <p className="text-xs text-slate-400 mb-3">Sourced from a16z, Sensor Tower, Duolingo, and market data.</p>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto -mx-4 px-4"><table className="w-full text-sm min-w-[480px]">
                 <thead><tr className="text-xs text-slate-400 border-b border-slate-700"><th className="text-left py-2">Benchmark</th><th className="text-right py-2">Data Point</th><th className="text-left py-2 pl-3">Source</th></tr></thead>
                 <tbody className="text-slate-300">
                   {[
@@ -256,10 +258,10 @@ export default function Dashboard() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </Card>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { label: "6-Month Inflection", mau: calc.mauM6, paid: calc.paidM6, mrr: calc.mrrM6, arr: calc.arrM6, arpu: calc.blendedArpuM6, signups: calc.totalSignupsM6 },
                 { label: "12-Month Inflection", mau: calc.mauM12, paid: calc.paidM12, mrr: calc.mrrM12, arr: calc.arrM12, arpu: calc.blendedArpuM12, signups: calc.totalSignupsM12 },
@@ -283,7 +285,7 @@ export default function Dashboard() {
         {/* ═══ TAB 1: AI AGENT TEAMS ═══ */}
         {tab === 1 && (
           <div className="space-y-6">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <Card><Metric label="Founders" value={calc.founderCount} /></Card>
               <Card><Metric label="Total Agents" value={calc.totalAgents} good /></Card>
               <Card><Metric label="Agent Cost/mo" value={currency(calc.totalAgentCostMo)} /></Card>
@@ -291,38 +293,54 @@ export default function Dashboard() {
             </div>
 
             {a.founders.map((founder, fi) => (
-              <Card key={founder.id} title={founder.title}>
-                <div className="flex items-center gap-2 mb-3">
-                  <TextInput small value={founder.title} onChange={(val) => updateFounders(f => { f[fi].title = val; return f; })} />
-                  <RemoveButton onClick={() => updateFounders(f => f.filter((_, i) => i !== fi))} />
-                </div>
-                <table className="w-full text-sm">
+              <Card key={founder.id} title={editing[`founder_${fi}`] ? undefined : founder.title} action={<EditToggle editing={!!editing[`founder_${fi}`]} onToggle={() => toggleEdit(`founder_${fi}`)} />}>
+                {editing[`founder_${fi}`] && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <TextInput small value={founder.title} onChange={(val) => updateFounders(f => { f[fi].title = val; return f; })} />
+                    <RemoveButton onClick={() => { updateFounders(f => f.filter((_, i) => i !== fi)); toggleEdit(`founder_${fi}`); }} />
+                  </div>
+                )}
+                <div className="overflow-x-auto -mx-4 px-4"><table className="w-full text-sm min-w-[400px]">
                   <thead><tr className="text-xs text-slate-400 border-b border-slate-700">
-                    <th className="text-left py-2">Agent</th><th className="text-left py-2">Function</th><th className="text-right py-2">$/mo</th><th className="w-8"></th>
+                    <th className="text-left py-2">Agent</th><th className="text-left py-2">Function</th><th className="text-right py-2">$/mo</th>{editing[`founder_${fi}`] && <th className="w-8"></th>}
                   </tr></thead>
                   <tbody>
                     {founder.agents.map((ag, ai) => (
                       <tr key={ai} className="border-b border-slate-800">
-                        <td className="py-1"><TextInput small value={ag.name} onChange={(val) => updateFounders(f => { f[fi].agents[ai].name = val; return f; })} /></td>
-                        <td className="py-1"><TextInput small value={ag.fn} onChange={(val) => updateFounders(f => { f[fi].agents[ai].fn = val; return f; })} /></td>
-                        <td className="py-1 w-24"><Input small value={ag.cost} onChange={(val) => updateFounders(f => { f[fi].agents[ai].cost = val; return f; })} prefix="$" /></td>
-                        <td className="py-1"><RemoveButton onClick={() => updateFounders(f => { f[fi].agents.splice(ai, 1); return f; })} /></td>
+                        {editing[`founder_${fi}`] ? (
+                          <>
+                            <td className="py-1"><TextInput small value={ag.name} onChange={(val) => updateFounders(f => { f[fi].agents[ai].name = val; return f; })} /></td>
+                            <td className="py-1"><TextInput small value={ag.fn} onChange={(val) => updateFounders(f => { f[fi].agents[ai].fn = val; return f; })} /></td>
+                            <td className="py-1 w-24"><Input small value={ag.cost} onChange={(val) => updateFounders(f => { f[fi].agents[ai].cost = val; return f; })} prefix="$" /></td>
+                            <td className="py-1"><RemoveButton onClick={() => updateFounders(f => { f[fi].agents.splice(ai, 1); return f; })} /></td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="py-1.5 pr-4 font-medium">{ag.name}</td>
+                            <td className="py-1.5 pr-4 text-slate-400">{ag.fn}</td>
+                            <td className="py-1.5 text-right font-mono text-white">${ag.cost}</td>
+                          </>
+                        )}
                       </tr>
                     ))}
                     <tr className="font-bold">
                       <td className="py-2" colSpan={2}>Subtotal</td>
                       <td className="py-2 text-right font-mono text-emerald-400">${founder.agents.reduce((s, ag) => s + ag.cost, 0)}/mo</td>
-                      <td></td>
+                      {editing[`founder_${fi}`] && <td></td>}
                     </tr>
                   </tbody>
-                </table>
-                <div className="mt-2">
-                  <AddButton label="Add Agent" onClick={() => updateFounders(f => { f[fi].agents.push({ name: "New Agent", fn: "Function", cost: 50 }); return f; })} />
-                </div>
+                </table></div>
+                {editing[`founder_${fi}`] && (
+                  <div className="mt-2">
+                    <AddButton label="Add Agent" onClick={() => updateFounders(f => { f[fi].agents.push({ name: "New Agent", fn: "Function", cost: 50 }); return f; })} />
+                  </div>
+                )}
               </Card>
             ))}
 
-            <AddButton label="Add Founder" onClick={() => updateFounders(f => [...f, { id: uid(), title: `Founder ${f.length + 1}`, agents: [{ name: "New Agent", fn: "Function", cost: 50 }] }])} />
+            {editing.addFounder !== false && (
+              <AddButton label="Add Founder" onClick={() => updateFounders(f => [...f, { id: uid(), title: `Founder ${f.length + 1}`, agents: [{ name: "New Agent", fn: "Function", cost: 50 }] }])} />
+            )}
           </div>
         )}
 
@@ -330,14 +348,14 @@ export default function Dashboard() {
         {tab === 2 && (
           <div className="space-y-6">
             <Card title="Token Cost Assumptions (edit these)">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <Input label="Cost/User/Mo @ M6" value={a.tokenCostPerUserM6} onChange={u("tokenCostPerUserM6")} prefix="$" />
                 <Input label="Cost/User/Mo @ M12" value={a.tokenCostPerUserM12} onChange={u("tokenCostPerUserM12")} prefix="$" />
                 <Input label="Cost/User/Mo @ M18" value={a.tokenCostPerUserM18} onChange={u("tokenCostPerUserM18")} prefix="$" />
                 <Input label="18-Mo Price Decline Factor" value={(a.priceDecline18mo * 100).toFixed(0)} onChange={(v) => u("priceDecline18mo")(v / 100)} suffix="%" />
               </div>
             </Card>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { label: "Month 6", mau: calc.mauM6, cpu: a.tokenCostPerUserM6, token: calc.tokenM6 },
                 { label: "Month 12", mau: calc.mauM12, cpu: a.tokenCostPerUserM12, token: calc.tokenM12 },
@@ -381,7 +399,7 @@ export default function Dashboard() {
         {tab === 4 && (
           <div className="space-y-6">
             <Card title="Founder Compensation by Phase (edit these)">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {a.phases.map((phase, pi) => (
                   <Input key={pi} label={`Founder Pay/mo (${PHASE_LABELS[pi]})`} value={phase.founderPayMonthly} onChange={(val) => updatePhases(p => { p[pi].founderPayMonthly = val; return p; })} prefix="$" />
                 ))}
@@ -389,7 +407,7 @@ export default function Dashboard() {
             </Card>
 
             <Card title="Unit Economics (derived)">
-              <div className="grid grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
                 <Metric label="LTV" value={currency(calc.ltv)} sub={`$${calc.blendedArpuM12?.toFixed(2)} / ${pct(a.churn)} churn`} good />
                 <Metric label="CAC (derived)" value={`$${calc.cac.toFixed(2)}`} sub="Total mkt / signups" />
                 <Metric label="LTV:CAC" value={`${calc.ltvCac.toFixed(0)}:1`} good={calc.ltvCac > 3} />
@@ -398,7 +416,7 @@ export default function Dashboard() {
             </Card>
 
             <Card title="Quarterly P&L (derived)">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto -mx-4 px-4"><table className="w-full text-sm min-w-[600px]">
                 <thead><tr className="text-xs text-slate-400 border-b border-slate-700">
                   <th className="text-left py-2">Quarter</th><th className="text-right py-2">Revenue</th><th className="text-right py-2">Tokens</th><th className="text-right py-2">Founders</th><th className="text-right py-2">Marketing</th><th className="text-right py-2">Total Cost</th><th className="text-right py-2">Net</th><th className="text-right py-2">Cash</th>
                 </tr></thead>
@@ -416,7 +434,7 @@ export default function Dashboard() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </Card>
           </div>
         )}
@@ -440,7 +458,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Channel breakdown */}
-                <table className="w-full text-sm mb-4">
+                <div className="overflow-x-auto -mx-4 px-4"><table className="w-full text-sm mb-4 min-w-[420px]">
                   <thead><tr className="text-xs text-slate-400 border-b border-slate-700">
                     <th className="text-left py-2">Channel</th><th className="text-right py-2">Budget %</th><th className="text-right py-2">Spend</th><th className="text-right py-2">Signups</th><th className="text-right py-2">Active</th>
                   </tr></thead>
@@ -455,31 +473,48 @@ export default function Dashboard() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
 
                 {/* GTM Motions */}
-                <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">GTM Motions</p>
-                <table className="w-full text-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">GTM Motions</p>
+                  <EditToggle editing={!!editing[`gtm_${pi}`]} onToggle={() => toggleEdit(`gtm_${pi}`)} />
+                </div>
+                <div className="overflow-x-auto -mx-4 px-4"><table className="w-full text-sm min-w-[560px]">
                   <thead><tr className="text-xs text-slate-400 border-b border-slate-700">
-                    <th className="text-left py-2">Motion</th><th className="text-left py-2">Channel</th><th className="text-left py-2">Agent</th><th className="text-left py-2">Metric</th><th className="text-right py-2">Budget</th><th className="w-8"></th>
+                    <th className="text-left py-2">Motion</th><th className="text-left py-2">Channel</th><th className="text-left py-2">Agent</th><th className="text-left py-2">Metric</th><th className="text-right py-2">Budget</th>{editing[`gtm_${pi}`] && <th className="w-8"></th>}
                   </tr></thead>
                   <tbody>
                     {phase.gtmMotions.map((g, gi) => (
                       <tr key={g.id} className="border-b border-slate-800">
-                        <td className="py-1"><TextInput small value={g.motion} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].motion = val; return p; })} /></td>
-                        <td className="py-1"><TextInput small value={g.channel} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].channel = val; return p; })} /></td>
-                        <td className="py-1"><TextInput small value={g.agent} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].agent = val; return p; })} /></td>
-                        <td className="py-1"><TextInput small value={g.metric} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].metric = val; return p; })} /></td>
-                        <td className="py-1 w-24"><TextInput small value={g.budget} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].budget = val; return p; })} /></td>
-                        <td className="py-1"><RemoveButton onClick={() => updatePhases(p => { p[pi].gtmMotions.splice(gi, 1); return p; })} /></td>
+                        {editing[`gtm_${pi}`] ? (
+                          <>
+                            <td className="py-1"><TextInput small value={g.motion} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].motion = val; return p; })} /></td>
+                            <td className="py-1"><TextInput small value={g.channel} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].channel = val; return p; })} /></td>
+                            <td className="py-1"><TextInput small value={g.agent} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].agent = val; return p; })} /></td>
+                            <td className="py-1"><TextInput small value={g.metric} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].metric = val; return p; })} /></td>
+                            <td className="py-1 w-24"><TextInput small value={g.budget} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].budget = val; return p; })} /></td>
+                            <td className="py-1"><RemoveButton onClick={() => updatePhases(p => { p[pi].gtmMotions.splice(gi, 1); return p; })} /></td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="py-1.5 pr-4 font-medium">{g.motion}</td>
+                            <td className="py-1.5 pr-4 text-slate-400">{g.channel}</td>
+                            <td className="py-1.5 pr-4 text-slate-400">{g.agent}</td>
+                            <td className="py-1.5 pr-4 text-slate-400">{g.metric}</td>
+                            <td className="py-1.5 text-right font-mono text-white">{g.budget}</td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
-                </table>
-                <div className="mt-2 flex gap-2">
-                  <AddButton label="Add Motion" onClick={() => updatePhases(p => { p[pi].gtmMotions.push({ id: uid(), motion: "New Motion", channel: "", agent: "", metric: "", budget: "$0" }); return p; })} />
-                  <RemoveButton onClick={() => updatePhases(p => p.filter((_, i) => i !== pi))} />
-                </div>
+                </table></div>
+                {editing[`gtm_${pi}`] && (
+                  <div className="mt-2 flex gap-2">
+                    <AddButton label="Add Motion" onClick={() => updatePhases(p => { p[pi].gtmMotions.push({ id: uid(), motion: "New Motion", channel: "", agent: "", metric: "", budget: "$0" }); return p; })} />
+                    <RemoveButton onClick={() => updatePhases(p => p.filter((_, i) => i !== pi))} />
+                  </div>
+                )}
               </Card>
             ))}
 
@@ -495,7 +530,7 @@ export default function Dashboard() {
         {tab === 6 && (
           <div className="space-y-6">
             <Card title="Marketing Budget by Phase (edit these)">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {a.phases.map((phase, pi) => (
                   <Input key={pi} label={`Monthly Budget ${PHASE_LABELS[pi]}`} value={phase.monthlyMktBudget} onChange={(val) => updatePhases(p => { p[pi].monthlyMktBudget = val; return p; })} prefix="$" />
                 ))}
@@ -506,32 +541,48 @@ export default function Dashboard() {
             </Card>
 
             {a.phases.map((phase, pi) => (
-              <Card key={phase.id} title={`Channel Config: ${PHASE_LABELS[pi]} — ${currency(phase.monthlyMktBudget * phase.months)} total`}>
-                <table className="w-full text-sm">
+              <Card key={phase.id} title={`Channel Config: ${PHASE_LABELS[pi]} — ${currency(phase.monthlyMktBudget * phase.months)} total`} action={<EditToggle editing={!!editing[`channels_${pi}`]} onToggle={() => toggleEdit(`channels_${pi}`)} />}>
+                <div className="overflow-x-auto -mx-4 px-4"><table className="w-full text-sm min-w-[640px]">
                   <thead><tr className="text-xs text-slate-400 border-b border-slate-700">
-                    <th className="text-left py-2">Channel</th><th className="text-right py-2 w-20">Budget %</th><th className="text-right py-2 w-20">CPA ($)</th><th className="text-right py-2 w-20">Conv %</th><th className="text-right py-2">Spend</th><th className="text-right py-2">Signups</th><th className="text-right py-2">Active</th><th className="w-8"></th>
+                    <th className="text-left py-2">Channel</th><th className="text-right py-2 w-20">Budget %</th><th className="text-right py-2 w-20">CPA ($)</th><th className="text-right py-2 w-20">Conv %</th><th className="text-right py-2">Spend</th><th className="text-right py-2">Signups</th><th className="text-right py-2">Active</th>{editing[`channels_${pi}`] && <th className="w-8"></th>}
                   </tr></thead>
                   <tbody>
                     {phase.channels.map((ch, ci) => {
                       const cr = calc.phases[pi]?.channels[ci];
                       return (
                         <tr key={ci} className="border-b border-slate-800">
-                          <td className="py-1"><TextInput small value={ch.label} onChange={(val) => updatePhases(p => { p[pi].channels[ci].label = val; return p; })} /></td>
-                          <td className="py-1"><Input small value={(ch.budgetPct * 100).toFixed(0)} onChange={(v) => updatePhases(p => { p[pi].channels[ci].budgetPct = v / 100; return p; })} suffix="%" /></td>
-                          <td className="py-1"><Input small value={ch.cpa} onChange={(v) => updatePhases(p => { p[pi].channels[ci].cpa = v; return p; })} prefix="$" /></td>
-                          <td className="py-1"><Input small value={(ch.signupToActiveRate * 100).toFixed(0)} onChange={(v) => updatePhases(p => { p[pi].channels[ci].signupToActiveRate = v / 100; return p; })} suffix="%" /></td>
-                          <td className="py-1 text-right font-mono text-slate-300">{currency(cr?.spend || 0)}</td>
-                          <td className="py-1 text-right font-mono">{num(cr?.signups || 0)}</td>
-                          <td className="py-1 text-right font-mono text-emerald-400">{num(cr?.activeUsers || 0)}</td>
-                          <td className="py-1"><RemoveButton onClick={() => updatePhases(p => { p[pi].channels.splice(ci, 1); return p; })} /></td>
+                          {editing[`channels_${pi}`] ? (
+                            <>
+                              <td className="py-1"><TextInput small value={ch.label} onChange={(val) => updatePhases(p => { p[pi].channels[ci].label = val; return p; })} /></td>
+                              <td className="py-1"><Input small value={(ch.budgetPct * 100).toFixed(0)} onChange={(v) => updatePhases(p => { p[pi].channels[ci].budgetPct = v / 100; return p; })} suffix="%" /></td>
+                              <td className="py-1"><Input small value={ch.cpa} onChange={(v) => updatePhases(p => { p[pi].channels[ci].cpa = v; return p; })} prefix="$" /></td>
+                              <td className="py-1"><Input small value={(ch.signupToActiveRate * 100).toFixed(0)} onChange={(v) => updatePhases(p => { p[pi].channels[ci].signupToActiveRate = v / 100; return p; })} suffix="%" /></td>
+                              <td className="py-1 text-right font-mono text-slate-300">{currency(cr?.spend || 0)}</td>
+                              <td className="py-1 text-right font-mono">{num(cr?.signups || 0)}</td>
+                              <td className="py-1 text-right font-mono text-emerald-400">{num(cr?.activeUsers || 0)}</td>
+                              <td className="py-1"><RemoveButton onClick={() => updatePhases(p => { p[pi].channels.splice(ci, 1); return p; })} /></td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="py-1.5 pr-4 font-medium">{ch.label}</td>
+                              <td className="py-1.5 text-right font-mono">{(ch.budgetPct * 100).toFixed(0)}%</td>
+                              <td className="py-1.5 text-right font-mono">${ch.cpa.toFixed(2)}</td>
+                              <td className="py-1.5 text-right font-mono">{(ch.signupToActiveRate * 100).toFixed(0)}%</td>
+                              <td className="py-1.5 text-right font-mono text-slate-300">{currency(cr?.spend || 0)}</td>
+                              <td className="py-1.5 text-right font-mono">{num(cr?.signups || 0)}</td>
+                              <td className="py-1.5 text-right font-mono text-emerald-400">{num(cr?.activeUsers || 0)}</td>
+                            </>
+                          )}
                         </tr>
                       );
                     })}
                   </tbody>
-                </table>
-                <div className="mt-2 flex gap-2">
-                  <AddButton label="Add Channel" onClick={() => updatePhases(p => { p[pi].channels.push({ channelId: uid(), label: "New Channel", budgetPct: 0.10, cpa: 5.00, signupToActiveRate: 0.25 }); return p; })} />
-                </div>
+                </table></div>
+                {editing[`channels_${pi}`] && (
+                  <div className="mt-2 flex gap-2">
+                    <AddButton label="Add Channel" onClick={() => updatePhases(p => { p[pi].channels.push({ channelId: uid(), label: "New Channel", budgetPct: 0.10, cpa: 5.00, signupToActiveRate: 0.25 }); return p; })} />
+                  </div>
+                )}
                 <div className="mt-2 text-xs text-slate-400">
                   Direct: {num(calc.phases[pi]?.directSignups || 0)} + Viral: {num(calc.phases[pi]?.viralUsers || 0)} + Partners: {num(calc.phases[pi]?.partnershipUsers || 0)} = <span className="text-white">{num(calc.phases[pi]?.totalSignups || 0)} total</span>
                 </div>
@@ -543,22 +594,35 @@ export default function Dashboard() {
         {/* ═══ TAB 7: PARTNERSHIPS & PR ═══ */}
         {tab === 7 && (
           <div className="space-y-6">
-            <Card title="Partnership User Projections (edit these)">
+            <Card title="Partnership User Projections" action={<EditToggle editing={!!editing.partnerships} onToggle={() => toggleEdit("partnerships")} />}>
               <p className="text-xs text-slate-400 mb-3">Estimated users each partnership drives. These flow into the growth model across all tabs.</p>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto -mx-4 px-4"><table className="w-full text-sm min-w-[580px]">
                 <thead><tr className="text-xs text-slate-400 border-b border-slate-700">
-                  <th className="text-left py-2">Partner</th><th className="text-left py-2">Category</th><th className="text-center py-2">Status</th><th className="text-right py-2 w-24">Users M6</th><th className="text-right py-2 w-24">Users M12</th><th className="text-right py-2 w-24">Users M18</th><th className="w-8"></th>
+                  <th className="text-left py-2">Partner</th><th className="text-left py-2">Category</th><th className="text-center py-2">Status</th><th className="text-right py-2 w-24">Users M6</th><th className="text-right py-2 w-24">Users M12</th><th className="text-right py-2 w-24">Users M18</th>{editing.partnerships && <th className="w-8"></th>}
                 </tr></thead>
                 <tbody>
                   {a.partnerships.map((p, pi) => (
                     <tr key={p.id} className="border-b border-slate-800">
-                      <td className="py-1"><TextInput small value={p.partner} onChange={(val) => updatePartnerships(ps => { ps[pi].partner = val; return ps; })} /></td>
-                      <td className="py-1"><TextInput small value={p.category} onChange={(val) => updatePartnerships(ps => { ps[pi].category = val; return ps; })} /></td>
-                      <td className="py-1 text-center"><StatusBadge status={p.status} /></td>
-                      <td className="py-1"><Input small value={p.usersM6} onChange={(val) => updatePartnerships(ps => { ps[pi].usersM6 = val; return ps; })} /></td>
-                      <td className="py-1"><Input small value={p.usersM12} onChange={(val) => updatePartnerships(ps => { ps[pi].usersM12 = val; return ps; })} /></td>
-                      <td className="py-1"><Input small value={p.usersM18} onChange={(val) => updatePartnerships(ps => { ps[pi].usersM18 = val; return ps; })} /></td>
-                      <td className="py-1"><RemoveButton onClick={() => updatePartnerships(ps => ps.filter((_, i) => i !== pi))} /></td>
+                      {editing.partnerships ? (
+                        <>
+                          <td className="py-1"><TextInput small value={p.partner} onChange={(val) => updatePartnerships(ps => { ps[pi].partner = val; return ps; })} /></td>
+                          <td className="py-1"><TextInput small value={p.category} onChange={(val) => updatePartnerships(ps => { ps[pi].category = val; return ps; })} /></td>
+                          <td className="py-1 text-center"><StatusSelect value={p.status} onChange={(val) => updatePartnerships(ps => { ps[pi].status = val; return ps; })} /></td>
+                          <td className="py-1"><Input small value={p.usersM6} onChange={(val) => updatePartnerships(ps => { ps[pi].usersM6 = val; return ps; })} /></td>
+                          <td className="py-1"><Input small value={p.usersM12} onChange={(val) => updatePartnerships(ps => { ps[pi].usersM12 = val; return ps; })} /></td>
+                          <td className="py-1"><Input small value={p.usersM18} onChange={(val) => updatePartnerships(ps => { ps[pi].usersM18 = val; return ps; })} /></td>
+                          <td className="py-1"><RemoveButton onClick={() => updatePartnerships(ps => ps.filter((_, i) => i !== pi))} /></td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-1.5 pr-4 font-medium">{p.partner}</td>
+                          <td className="py-1.5 pr-4 text-slate-400">{p.category}</td>
+                          <td className="py-1.5 text-center"><StatusBadge status={p.status} /></td>
+                          <td className="py-1.5 text-right font-mono text-white">{num(p.usersM6)}</td>
+                          <td className="py-1.5 text-right font-mono text-white">{num(p.usersM12)}</td>
+                          <td className="py-1.5 text-right font-mono text-white">{num(p.usersM18)}</td>
+                        </>
+                      )}
                     </tr>
                   ))}
                   <tr className="font-bold">
@@ -566,17 +630,19 @@ export default function Dashboard() {
                     <td className="py-2 text-right font-mono text-emerald-400">{num(a.partnerships.reduce((s, p) => s + p.usersM6, 0))}</td>
                     <td className="py-2 text-right font-mono text-emerald-400">{num(a.partnerships.reduce((s, p) => s + p.usersM12, 0))}</td>
                     <td className="py-2 text-right font-mono text-emerald-400">{num(a.partnerships.reduce((s, p) => s + p.usersM18, 0))}</td>
-                    <td></td>
+                    {editing.partnerships && <td></td>}
                   </tr>
                 </tbody>
-              </table>
-              <div className="mt-2">
-                <AddButton label="Add Partnership" onClick={() => updatePartnerships(ps => [...ps, { id: uid(), partner: "New Partner", category: "Category", usersM6: 0, usersM12: 0, usersM18: 0, status: "on_track" }])} />
-              </div>
+              </table></div>
+              {editing.partnerships && (
+                <div className="mt-2">
+                  <AddButton label="Add Partnership" onClick={() => updatePartnerships(ps => [...ps, { id: uid(), partner: "New Partner", category: "Category", usersM6: 0, usersM12: 0, usersM18: 0, status: "on_track" }])} />
+                </div>
+              )}
             </Card>
 
             <Card title="Partnership Value Summary">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Metric label="Total Partner Users (18mo)" value={num(calc.totalPartnerUsers)} good />
                 <Metric label="% of Total Signups" value={pct(calc.totalPartnerUsers / (calc.totalSignupsM18 || 1))} />
                 <Metric label="Effective CPA" value="$0" sub="Zero-cost acquisition" good />
@@ -588,9 +654,9 @@ export default function Dashboard() {
         {/* ═══ TAB 8: ASK SUMMARY ═══ */}
         {tab === 8 && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-blue-900/30 to-slate-800 rounded-xl border border-blue-500/30 p-8 text-center">
+            <div className="bg-gradient-to-r from-blue-900/30 to-slate-800 rounded-xl border border-blue-500/30 p-5 sm:p-8 text-center">
               <p className="text-sm text-white uppercase tracking-wide mb-2">The Ask</p>
-              <p className="text-xl font-light text-white italic">
+              <p className="text-base sm:text-xl font-light text-white italic">
                 &quot;We are raising <span className="font-bold text-emerald-400">{currency(a.raise)}</span> to secure our first <span className="font-bold text-emerald-400">{num(calc.paidM6)}+</span> paid subscribers and validate unit economics within {a.phases[0]?.months || 6} months.&quot;
               </p>
             </div>
@@ -604,8 +670,8 @@ export default function Dashboard() {
                   { cat: "Legal, Tools & Ops", p: 7, note: "Entity setup, tools, compliance" },
                   { cat: "Buffer", p: 3, note: "Contingency" },
                 ].map((f, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-48 text-sm font-medium">{f.cat}</div>
+                  <div key={i} className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-28 sm:w-48 text-xs sm:text-sm font-medium shrink-0">{f.cat}</div>
                     <div className="flex-1 bg-slate-800 rounded-full h-6 overflow-hidden">
                       <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full flex items-center pl-2" style={{ width: `${f.p}%` }}>
                         <span className="text-xs font-mono text-white">{currency(a.raise * f.p / 100)}</span>
@@ -617,7 +683,7 @@ export default function Dashboard() {
               </div>
             </Card>
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <Card><Metric label="6-Mo ARR" value={currency(calc.arrM6)} sub={`${num(calc.paidM6)} paid`} /></Card>
               <Card><Metric label="12-Mo ARR" value={currency(calc.arrM12)} sub={`${num(calc.paidM12)} paid`} good /></Card>
               <Card><Metric label="18-Mo ARR" value={currency(calc.arrM18)} sub={`${num(calc.paidM18)} paid`} good /></Card>
