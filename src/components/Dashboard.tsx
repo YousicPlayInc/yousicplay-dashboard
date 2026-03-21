@@ -129,12 +129,31 @@ export default function Dashboard() {
     });
   }, [persistAll]);
 
-  const resetDefaults = useCallback(() => {
+  // Save/Reset checkpoint
+  const [checkpoint, setCheckpoint] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+
+  // Auto-set initial checkpoint once data loads from Supabase
+  const initialCheckpointSet = useRef(false);
+  useEffect(() => {
+    if (loaded && !initialCheckpointSet.current) {
+      setCheckpoint(JSON.stringify(a));
+      initialCheckpointSet.current = true;
+    }
+  }, [loaded, a]);
+
+  const saveCheckpoint = useCallback(() => {
+    setCheckpoint(JSON.stringify(aRef.current));
+    setLastSavedAt(new Date().toLocaleTimeString());
+  }, []);
+
+  const resetToCheckpoint = useCallback(() => {
+    if (!checkpoint) return;
     pushHistory();
-    const defaults = JSON.parse(JSON.stringify(DEFAULT_ASSUMPTIONS)) as Assumptions;
-    setA(defaults);
-    persistAll(defaults);
-  }, [pushHistory, persistAll]);
+    const saved = JSON.parse(checkpoint) as Assumptions;
+    setA(saved);
+    persistAll(saved);
+  }, [checkpoint, pushHistory, persistAll]);
 
   // Update a scalar assumption
   const u = useCallback(
@@ -220,7 +239,9 @@ export default function Dashboard() {
               <div className="flex items-center gap-1">
                 <button onClick={undo} disabled={history.length === 0} className="px-2 py-1 text-xs rounded border border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Undo">Undo</button>
                 <button onClick={redo} disabled={future.length === 0} className="px-2 py-1 text-xs rounded border border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Redo">Redo</button>
-                <button onClick={resetDefaults} className="px-2 py-1 text-xs rounded border border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 transition-colors" title="Reset to defaults">Reset</button>
+                <button onClick={saveCheckpoint} className="px-2 py-1 text-xs rounded border border-emerald-600/50 text-emerald-400 hover:bg-emerald-400/10 transition-colors" title="Save checkpoint">Save</button>
+                <button onClick={resetToCheckpoint} disabled={!checkpoint} className="px-2 py-1 text-xs rounded border border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Reset to last save">Reset</button>
+                {lastSavedAt && <span className="text-xs text-slate-500 ml-1">saved {lastSavedAt}</span>}
               </div>
             </div>
             <p className="text-xs sm:text-sm text-slate-400">Pre-Seed Financial Model &amp; Launch Dashboard</p>
