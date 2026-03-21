@@ -241,12 +241,12 @@ export default function Dashboard() {
               <p className="text-xs text-slate-400 mb-3">14-day full Pro trial on signup. No payment upfront.</p>
               <div className="grid grid-cols-4 gap-3 mb-4">
                 <div className="bg-slate-800 rounded-lg p-3 border border-slate-600">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide">Guest</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">Guest</p>
                   <p className="text-lg font-bold font-mono text-white mt-1">No account</p>
                   <p className="text-xs text-slate-400 mt-2">Zero-friction entry</p>
                 </div>
                 <div className="bg-slate-800 rounded-lg p-3 border border-slate-600">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide">Free</p>
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">Free</p>
                   <p className="text-lg font-bold font-mono text-white mt-1">$0</p>
                   <p className="text-xs text-slate-400 mt-2">Assessment + limited experience</p>
                 </div>
@@ -269,7 +269,7 @@ export default function Dashboard() {
                   <p className="text-xs text-slate-400 mt-2">Community + performance layer</p>
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-3 text-xs text-slate-500 bg-slate-800/50 rounded p-3">
+              <div className="grid grid-cols-4 gap-3 text-xs text-slate-400 bg-slate-800/50 rounded p-3">
                 <div><span className="text-slate-400 block">Blended ARPU (M6)</span><span className="text-white font-mono">${calc.blendedArpuM6?.toFixed(2)}/mo</span></div>
                 <div><span className="text-slate-400 block">Blended ARPU (M12)</span><span className="text-white font-mono">${calc.blendedArpuM12?.toFixed(2)}/mo</span></div>
                 <div><span className="text-slate-400 block">Blended ARPU (M18)</span><span className="text-white font-mono">${calc.blendedArpuM18?.toFixed(2)}/mo</span></div>
@@ -330,7 +330,7 @@ export default function Dashboard() {
                       <tr key={i} className={`border-b border-slate-800 ${i % 2 !== 0 ? "bg-slate-800/30" : ""}`}>
                         <td className="py-1.5">{metric}</td>
                         <td className="py-1.5 text-right font-mono text-white font-medium">{val}</td>
-                        <td className="py-1.5 pl-3 text-xs text-slate-500">{source}</td>
+                        <td className="py-1.5 pl-3 text-xs text-slate-400">{source}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -345,7 +345,7 @@ export default function Dashboard() {
                 { label: "18-Month Inflection", sub: "Retention proven, seed-ready", bench: "AI paid retention matches pre-AI SaaS M1-M6 (a16z)", users: a.usersM18, mau: calc.mauM18, paid: calc.paidM18, mrr: calc.mrrM18, arr: calc.arrM18, wow: a.wowM18, arpu: calc.blendedArpuM18 },
               ].map((ip, i) => (
                 <Card key={i} title={ip.label}>
-                  <p className="text-xs text-slate-500 mb-1">{ip.sub}</p>
+                  <p className="text-xs text-slate-400 mb-1">{ip.sub}</p>
                   <p className="text-xs text-white/70 mb-3 italic">{ip.bench}</p>
                   <div className="space-y-2">
                     <div className="flex justify-between"><span className="text-xs text-slate-400">Registered Users</span><span className="text-sm font-mono">{num(ip.users)}</span></div>
@@ -364,15 +364,15 @@ export default function Dashboard() {
             <Card title="How Our Targets Compare">
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">vs. Median AI Consumer App (a16z)</p>
+                  <p className="text-xs text-slate-400 mb-1">vs. Median AI Consumer App (a16z)</p>
                   <p className="text-slate-300">Median hits $4.2M ARR by M12. Our M12 target of {currency(calc.arrM12)} is conservative — we&apos;re a niche vertical, not a horizontal AI tool. Reaching even 10% of median validates the model.</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">vs. Duolingo&apos;s AI Acceleration</p>
+                  <p className="text-xs text-slate-400 mb-1">vs. Duolingo&apos;s AI Acceleration</p>
                   <p className="text-slate-300">Duolingo&apos;s AI features drove 51% DAU growth and 7% free-to-paid conversion. Our {pct(a.convRate)} conversion target is conservative vs. Duolingo but realistic for a new brand without their distribution.</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">vs. AI App Market Growth</p>
+                  <p className="text-xs text-slate-400 mb-1">vs. AI App Market Growth</p>
                   <p className="text-slate-300">AI app downloads grew 67% HoH in 2025, consumer spend tripled to $5B. Music education ($4.6B) is under-penetrated by AI — we&apos;re riding both tailwinds simultaneously.</p>
                 </div>
               </div>
@@ -526,10 +526,10 @@ export default function Dashboard() {
                     </div>
                     <p className="text-xs text-slate-400 mb-3">{r.how}</p>
                     <div className="grid grid-cols-4 gap-3 text-sm">
-                      <div><span className="text-xs text-slate-500 block">Target</span><span className="text-white font-mono">{r.target}</span></div>
-                      <div><span className="text-xs text-slate-500 block">M6</span><span className="font-mono">{r.m6}</span></div>
-                      <div><span className="text-xs text-slate-500 block">M12</span><span className="font-mono">{r.m12}</span></div>
-                      <div><span className="text-xs text-slate-500 block">M18</span><span className="font-mono">{r.m18}</span></div>
+                      <div><span className="text-xs text-slate-400 block">Target</span><span className="text-white font-mono">{r.target}</span></div>
+                      <div><span className="text-xs text-slate-400 block">M6</span><span className="font-mono">{r.m6}</span></div>
+                      <div><span className="text-xs text-slate-400 block">M12</span><span className="font-mono">{r.m12}</span></div>
+                      <div><span className="text-xs text-slate-400 block">M18</span><span className="font-mono">{r.m18}</span></div>
                     </div>
                   </div>
                 </div>
@@ -639,7 +639,7 @@ export default function Dashboard() {
                   ))}
                 </tbody>
               </table>
-              <div className="mt-3 flex gap-4 text-xs text-slate-500">
+              <div className="mt-3 flex gap-4 text-xs text-slate-400">
                 <span>Phase 1 Budget: ~{currency(a.mktBudgetM1_6 * 6)}</span>
                 <span>|</span>
                 <span>CAC Target: &lt;$3.00</span>
@@ -686,7 +686,7 @@ export default function Dashboard() {
                   ))}
                 </tbody>
               </table>
-              <div className="mt-3 flex gap-4 text-xs text-slate-500">
+              <div className="mt-3 flex gap-4 text-xs text-slate-400">
                 <span>Phase 2 Budget: ~{currency(a.mktBudgetM7_12 * 6)}</span>
                 <span>|</span>
                 <span>CAC Target: &lt;$6.00</span>
@@ -733,7 +733,7 @@ export default function Dashboard() {
                   ))}
                 </tbody>
               </table>
-              <div className="mt-3 flex gap-4 text-xs text-slate-500">
+              <div className="mt-3 flex gap-4 text-xs text-slate-400">
                 <span>Phase 3 Budget: ~{currency(a.mktBudgetM13_18 * 6)}</span>
                 <span>|</span>
                 <span>CAC Target: &lt;$8.00</span>
@@ -764,7 +764,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-slate-500 text-center mt-3">Strategy shifts from community-led organic (cheapest) → proven paid channels → B2B2C revenue diversification</p>
+              <p className="text-xs text-slate-400 text-center mt-3">Strategy shifts from community-led organic (cheapest) → proven paid channels → B2B2C revenue diversification</p>
             </Card>
 
             {/* GTM Agents by Phase */}
@@ -784,7 +784,7 @@ export default function Dashboard() {
                   {["Ad Ops Agent", "PR Agent", "Partnerships Agent", "App Store Agent", "Analytics Agent (scaled)", "Curriculum Agent (SEO)"].map((ag, i) => (
                     <div key={i} className="flex items-center gap-2 py-1 border-b border-slate-800">
                       <span className={`w-2 h-2 rounded-full ${i < 3 ? "bg-blue-400" : "bg-blue-500/50"}`} />
-                      <span className="text-slate-300">{ag} {i >= 3 && <span className="text-xs text-slate-500">(expanded)</span>}</span>
+                      <span className="text-slate-300">{ag} {i >= 3 && <span className="text-xs text-slate-400">(expanded)</span>}</span>
                     </div>
                   ))}
                 </div>
@@ -793,7 +793,7 @@ export default function Dashboard() {
                   {["Localization Agent", "B2B Sales Agent", "IR Agent (fundraise)", "All Phase 1+2 agents", "Neuro Agent (partnerships)", "Growth Agent (viral v2)"].map((ag, i) => (
                     <div key={i} className="flex items-center gap-2 py-1 border-b border-slate-800">
                       <span className={`w-2 h-2 rounded-full ${i < 3 ? "bg-blue-300" : "bg-blue-400/50"}`} />
-                      <span className="text-slate-300">{ag} {i >= 3 && <span className="text-xs text-slate-500">(continued)</span>}</span>
+                      <span className="text-slate-300">{ag} {i >= 3 && <span className="text-xs text-slate-400">(continued)</span>}</span>
                     </div>
                   ))}
                 </div>

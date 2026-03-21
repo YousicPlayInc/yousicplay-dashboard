@@ -32,7 +32,7 @@ export function Metric({
         {value}
       </div>
       <div className="text-xs text-slate-400">{label}</div>
-      {sub && <div className="text-xs text-slate-500 mt-0.5">{sub}</div>}
+      {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
     </div>
   );
 }
