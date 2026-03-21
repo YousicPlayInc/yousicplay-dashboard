@@ -155,6 +155,15 @@ export default function Dashboard() {
     persistAll(saved);
   }, [checkpoint, pushHistory, persistAll]);
 
+  const resetToDefaults = useCallback(() => {
+    pushHistory();
+    const defaults = JSON.parse(JSON.stringify(DEFAULT_ASSUMPTIONS)) as Assumptions;
+    setA(defaults);
+    persistAll(defaults);
+    setCheckpoint(JSON.stringify(defaults));
+    setLastSavedAt(null);
+  }, [pushHistory, persistAll]);
+
   // Update a scalar assumption
   const u = useCallback(
     (key: string) => (val: number) => {
@@ -241,6 +250,7 @@ export default function Dashboard() {
                 <button onClick={redo} disabled={future.length === 0} className="px-2 py-1 text-xs rounded border border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Redo">Redo</button>
                 <button onClick={saveCheckpoint} className="px-2 py-1 text-xs rounded border border-emerald-600/50 text-emerald-400 hover:bg-emerald-400/10 transition-colors" title="Save checkpoint">Save</button>
                 <button onClick={resetToCheckpoint} disabled={!checkpoint} className="px-2 py-1 text-xs rounded border border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Reset to last save">Reset</button>
+                <button onClick={resetToDefaults} className="px-2 py-1 text-xs rounded border border-red-600/40 text-red-400/70 hover:text-red-400 hover:bg-red-400/10 transition-colors" title="Reset everything to original defaults">Defaults</button>
                 {lastSavedAt && <span className="text-xs text-slate-500 ml-1">saved {lastSavedAt}</span>}
               </div>
             </div>
