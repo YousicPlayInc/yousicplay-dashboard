@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { DEFAULT_ASSUMPTIONS, SCALAR_KEYS, fromSupabaseRows, type Assumptions, type FounderConfig, type AgentConfig, type PartnershipConfig, type PhaseConfig, type GtmMotion, type ChannelAllocation } from "@/lib/defaults";
+import { DEFAULT_ASSUMPTIONS, SCALAR_KEYS, fromSupabaseRows, type Assumptions, type FounderConfig, type AgentConfig, type PartnershipConfig, type PhaseConfig, type GtmMotion, type ChannelAllocation, type ActualQuarter } from "@/lib/defaults";
 import { computeAll, reverseEngineer } from "@/lib/calculations";
 import { currency, pct, num } from "@/lib/format";
 import { Card, Metric, Input, TextInput, AddButton, RemoveButton, EditToggle, StatusBadge, StatusSelect } from "@/components/ui";
@@ -16,6 +16,7 @@ const TABS = [
   "GTM Strategy",
   "Marketing & Growth",
   "Partnerships & PR",
+  "Actuals vs Plan",
   "Ask Summary",
 ];
 
@@ -196,6 +197,14 @@ export default function Dashboard() {
       const next = fn(JSON.parse(JSON.stringify(prev.partnerships)));
       persistKey("_partnerships_json", JSON.stringify(next));
       return { ...prev, partnerships: next };
+    });
+  }, [persistKey]);
+
+  const updateActuals = useCallback((fn: (prev: ActualQuarter[]) => ActualQuarter[]) => {
+    setA((prev) => {
+      const next = fn(JSON.parse(JSON.stringify(prev.actuals)));
+      persistKey("_actuals_json", JSON.stringify(next));
+      return { ...prev, actuals: next };
     });
   }, [persistKey]);
 
@@ -404,12 +413,56 @@ export default function Dashboard() {
               </div>
               {a.reinvestPct > 0 && (
                 <div className="mt-3 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-sm">
-                  <span className="text-emerald-400 font-medium">{(a.reinvestPct * 100).toFixed(0)}% of surplus</span>
-                  <span className="text-slate-400"> (revenue minus opex &amp; base marketing) reinvested into growth each quarter. </span>
+                  <span className="text-emerald-400 font-medium">{(a.reinvestPct * 100).toFixed(0)}% of available cash</span>
+                  <span className="text-slate-400"> (after costs) reinvested into growth each quarter. </span>
                   <span className="text-white font-mono">{currency(calc.totalReinvested)}</span>
                   <span className="text-slate-400"> total reinvested over 18mo.</span>
                 </div>
               )}
+            </Card>
+
+            <Card title="Use of Funds">
+              <p className="text-xs text-slate-400 mb-3">How the raise is allocated. Percentages drive quarterly budgets — raise more → spend more proportionally.</p>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <Input label="Marketing" value={(a.uofMarketing * 100).toFixed(0)} onChange={(v) => u("uofMarketing")(v / 100)} suffix="%" />
+                <Input label="Founder Pay" value={(a.uofFounderPay * 100).toFixed(0)} onChange={(v) => u("uofFounderPay")(v / 100)} suffix="%" />
+                <Input label="Infrastructure" value={(a.uofInfra * 100).toFixed(0)} onChange={(v) => u("uofInfra")(v / 100)} suffix="%" />
+                <Input label="AI Agents" value={(a.uofAgents * 100).toFixed(0)} onChange={(v) => u("uofAgents")(v / 100)} suffix="%" />
+                <Input label="Reserve" value={(a.uofReserve * 100).toFixed(0)} onChange={(v) => u("uofReserve")(v / 100)} suffix="%" />
+              </div>
+              {(() => {
+                const totalPct = a.uofMarketing + a.uofFounderPay + a.uofInfra + a.uofAgents + a.uofReserve;
+                const bars = [
+                  { label: "Marketing", pct: a.uofMarketing, amt: calc.uofMktDollars, color: "bg-emerald-500" },
+                  { label: "Founder Pay", pct: a.uofFounderPay, amt: calc.uofFounderDollars, color: "bg-blue-500" },
+                  { label: "Infrastructure", pct: a.uofInfra, amt: calc.uofInfraDollars, color: "bg-yellow-500" },
+                  { label: "AI Agents", pct: a.uofAgents, amt: calc.uofAgentsDollars, color: "bg-purple-500" },
+                  { label: "Reserve", pct: a.uofReserve, amt: calc.uofReserveDollars, color: "bg-slate-500" },
+                ];
+                return (
+                  <div className="mt-4">
+                    <div className="flex h-6 rounded-lg overflow-hidden mb-3">
+                      {bars.map((b) => (
+                        <div key={b.label} className={`${b.color} transition-all`} style={{ width: `${(b.pct / totalPct) * 100}%` }} />
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                      {bars.map((b) => (
+                        <div key={b.label} className="flex items-center gap-2">
+                          <div className={`w-2.5 h-2.5 rounded-full ${b.color}`} />
+                          <span className="text-slate-400">{b.label}</span>
+                          <span className="font-mono text-white ml-auto">{currency(b.amt)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {Math.abs(totalPct - 1) > 0.01 && (
+                      <p className="mt-2 text-xs text-amber-400">
+                        Total: {(totalPct * 100).toFixed(0)}% — {totalPct > 1 ? "over" : "under"} 100%
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </Card>
 
             <Card title="Derived User Growth (from marketing channels)">
@@ -847,8 +900,134 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ═══ TAB 8: ASK SUMMARY ═══ */}
+        {/* ═══ TAB 8: ACTUALS VS PLAN ═══ */}
         {tab === 8 && (
+          <div className="space-y-6">
+            <Card title="Actuals vs Projections">
+              <p className="text-xs text-slate-400 mb-4">Enter actual performance data to compare against projected targets. Variance shows (Actual − Projected).</p>
+              <div className="overflow-x-auto -mx-4 px-4">
+                <table className="w-full text-sm min-w-[900px]">
+                  <thead>
+                    <tr className="text-xs text-slate-400 border-b border-slate-700">
+                      <th className="text-left py-2 w-16">Qtr</th>
+                      <th className="text-right py-2">MAU</th>
+                      <th className="text-right py-2">Paid Users</th>
+                      <th className="text-right py-2">MRR</th>
+                      <th className="text-right py-2">Revenue</th>
+                      <th className="text-right py-2">Mkt Spend</th>
+                      <th className="text-right py-2">Founder</th>
+                      <th className="text-right py-2">Infra</th>
+                      <th className="text-right py-2">Token</th>
+                      <th className="text-left py-2 pl-3">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {a.actuals.map((aq, qi) => {
+                      const proj = calc.cashFlow[qi];
+                      return (
+                        <React.Fragment key={qi}>
+                          <tr className="border-b border-slate-800 bg-slate-800/20">
+                            <td className="py-1 font-medium text-white" rowSpan={3}>{aq.label}</td>
+                            <td className="py-1 text-right"><Input small value={aq.mau} onChange={(v) => updateActuals(qs => { qs[qi].mau = v; return qs; })} /></td>
+                            <td className="py-1 text-right"><Input small value={aq.paidUsers} onChange={(v) => updateActuals(qs => { qs[qi].paidUsers = v; return qs; })} /></td>
+                            <td className="py-1 text-right"><Input small value={aq.mrr} onChange={(v) => updateActuals(qs => { qs[qi].mrr = v; return qs; })} prefix="$" /></td>
+                            <td className="py-1 text-right"><Input small value={aq.revenue} onChange={(v) => updateActuals(qs => { qs[qi].revenue = v; return qs; })} prefix="$" /></td>
+                            <td className="py-1 text-right"><Input small value={aq.mktSpend} onChange={(v) => updateActuals(qs => { qs[qi].mktSpend = v; return qs; })} prefix="$" /></td>
+                            <td className="py-1 text-right"><Input small value={aq.founderPay} onChange={(v) => updateActuals(qs => { qs[qi].founderPay = v; return qs; })} prefix="$" /></td>
+                            <td className="py-1 text-right"><Input small value={aq.infraCost} onChange={(v) => updateActuals(qs => { qs[qi].infraCost = v; return qs; })} prefix="$" /></td>
+                            <td className="py-1 text-right"><Input small value={aq.tokenCost} onChange={(v) => updateActuals(qs => { qs[qi].tokenCost = v; return qs; })} prefix="$" /></td>
+                            <td className="py-1 pl-3"><TextInput small value={aq.notes} onChange={(v) => updateActuals(qs => { qs[qi].notes = v; return qs; })} /></td>
+                          </tr>
+                          {proj && (
+                            <>
+                              <tr className="text-xs text-slate-500">
+                                <td className="py-0.5 text-right font-mono">{num(proj.mau)}</td>
+                                <td className="py-0.5 text-right font-mono">{num(proj.paidUsers)}</td>
+                                <td className="py-0.5 text-right font-mono">{currency(proj.mrr)}</td>
+                                <td className="py-0.5 text-right font-mono">{currency(proj.rev)}</td>
+                                <td className="py-0.5 text-right font-mono">{currency(proj.mkt + proj.reinvestMkt)}</td>
+                                <td className="py-0.5 text-right font-mono">{currency(proj.founder)}</td>
+                                <td className="py-0.5 text-right font-mono">{currency(proj.infra)}</td>
+                                <td className="py-0.5 text-right font-mono">{currency(proj.token)}</td>
+                                <td className="py-0.5 pl-3 text-slate-600 italic">projected</td>
+                              </tr>
+                              <tr className="text-xs border-b border-slate-700">
+                                {[
+                                  { actual: aq.mau, proj: proj.mau, isCurrency: false },
+                                  { actual: aq.paidUsers, proj: proj.paidUsers, isCurrency: false },
+                                  { actual: aq.mrr, proj: proj.mrr, isCurrency: true },
+                                  { actual: aq.revenue, proj: proj.rev, isCurrency: true },
+                                  { actual: aq.mktSpend, proj: proj.mkt + proj.reinvestMkt, isCurrency: true },
+                                  { actual: aq.founderPay, proj: proj.founder, isCurrency: true },
+                                  { actual: aq.infraCost, proj: proj.infra, isCurrency: true },
+                                  { actual: aq.tokenCost, proj: proj.token, isCurrency: true },
+                                ].map((v, vi) => {
+                                  const delta = v.actual - v.proj;
+                                  const isRevMetric = vi <= 3; // MAU, Paid, MRR, Revenue: positive = good
+                                  const isCostMetric = vi >= 4; // Costs: negative = good (spent less)
+                                  const isGood = v.actual === 0 ? null : isRevMetric ? delta > 0 : isCostMetric ? delta < 0 : null;
+                                  return (
+                                    <td key={vi} className={`py-0.5 text-right font-mono ${v.actual === 0 ? "text-slate-700" : isGood ? "text-emerald-400" : "text-red-400"}`}>
+                                      {v.actual === 0 ? "—" : v.isCurrency ? (delta >= 0 ? "+" : "") + currency(delta) : (delta >= 0 ? "+" : "") + num(delta)}
+                                    </td>
+                                  );
+                                })}
+                                <td className="py-0.5 pl-3 text-slate-600 italic">variance</td>
+                              </tr>
+                            </>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {["Revenue", "MAU", "Paid Users"].map((metric) => {
+                const getActual = (qi: number) => metric === "Revenue" ? a.actuals[qi]?.revenue : metric === "MAU" ? a.actuals[qi]?.mau : a.actuals[qi]?.paidUsers;
+                const getProj = (qi: number) => metric === "Revenue" ? calc.cashFlow[qi]?.rev : metric === "MAU" ? calc.cashFlow[qi]?.mau : calc.cashFlow[qi]?.paidUsers;
+                const isCurr = metric === "Revenue";
+                const hasData = a.actuals.some((aq) => (metric === "Revenue" ? aq.revenue : metric === "MAU" ? aq.mau : aq.paidUsers) > 0);
+                return (
+                  <Card key={metric} title={`${metric} — Plan vs Actual`}>
+                    {!hasData ? (
+                      <p className="text-xs text-slate-500 text-center py-4">Enter actuals above to see comparison</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {[0, 1, 2, 3, 4, 5].map((qi) => {
+                          const actual = getActual(qi) || 0;
+                          const proj = getProj(qi) || 0;
+                          const maxVal = Math.max(actual, proj, 1);
+                          return (
+                            <div key={qi} className="text-xs">
+                              <div className="flex justify-between text-slate-400 mb-0.5">
+                                <span>Q{qi + 1}</span>
+                                <span className="font-mono">{isCurr ? currency(actual) : num(actual)} / {isCurr ? currency(proj) : num(proj)}</span>
+                              </div>
+                              <div className="relative h-4 bg-slate-800 rounded overflow-hidden">
+                                <div className="absolute h-2 top-0 bg-blue-500/50 rounded-t" style={{ width: `${(proj / maxVal) * 100}%` }} />
+                                <div className="absolute h-2 bottom-0 bg-emerald-500/80 rounded-b" style={{ width: `${(actual / maxVal) * 100}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="flex gap-4 text-xs text-slate-500 mt-1">
+                          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-blue-500/50" />Projected</span>
+                          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-500/80" />Actual</span>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ TAB 9: ASK SUMMARY ═══ */}
+        {tab === 9 && (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-blue-900/30 to-slate-800 rounded-xl border border-blue-500/30 p-5 sm:p-8 text-center">
               <p className="text-sm text-white uppercase tracking-wide mb-2">The Ask</p>
@@ -860,11 +1039,11 @@ export default function Dashboard() {
             <Card title="Use of Funds">
               <div className="space-y-3">
                 {[
-                  { cat: "AI/Token Credits & Infra", p: 37, note: "LLM APIs, hosting, audio processing" },
-                  { cat: "Founder Stipends", p: 40, note: `${calc.founderCount} founders, minimal stipends` },
-                  { cat: "Marketing & Growth", p: 13, note: "Paid acquisition, content, community" },
-                  { cat: "Legal, Tools & Ops", p: 7, note: "Entity setup, tools, compliance" },
-                  { cat: "Buffer", p: 3, note: "Contingency" },
+                  { cat: "Marketing & Growth", p: Math.round(a.uofMarketing * 100), note: "Paid acquisition, content, community" },
+                  { cat: "Founder Stipends", p: Math.round(a.uofFounderPay * 100), note: `${calc.founderCount} founders, minimal stipends` },
+                  { cat: "Infrastructure", p: Math.round(a.uofInfra * 100), note: "Hosting, audio processing" },
+                  { cat: "AI Agents & Tools", p: Math.round(a.uofAgents * 100), note: "LLM APIs, AI agent costs" },
+                  { cat: "Reserve", p: Math.round(a.uofReserve * 100), note: "Contingency" },
                 ].map((f, i) => (
                   <div key={i} className="flex items-center gap-2 sm:gap-3">
                     <div className="w-28 sm:w-48 text-xs sm:text-sm font-medium shrink-0">{f.cat}</div>

@@ -50,6 +50,19 @@ export interface FounderConfig {
   agents: AgentConfig[];
 }
 
+export interface ActualQuarter {
+  label: string;       // Q1, Q2, etc.
+  mau: number;
+  paidUsers: number;
+  mrr: number;
+  revenue: number;
+  mktSpend: number;
+  founderPay: number;
+  infraCost: number;
+  tokenCost: number;
+  notes: string;
+}
+
 export interface Assumptions {
   raise: number;
   proMonthly: number;
@@ -65,9 +78,16 @@ export interface Assumptions {
   priceDecline18mo: number;
   targetARR12: number;
   reinvestPct: number;
+  // Use of Funds — percentage allocation of raise capital
+  uofMarketing: number;
+  uofFounderPay: number;
+  uofInfra: number;
+  uofAgents: number;
+  uofReserve: number;
   phases: PhaseConfig[];
   partnerships: PartnershipConfig[];
   founders: FounderConfig[];
+  actuals: ActualQuarter[];
 }
 
 // Scalar keys that persist as individual key/value pairs
@@ -76,6 +96,7 @@ export const SCALAR_KEYS = [
   "convRate", "churn", "viralK",
   "tokenCostPerUserM6", "tokenCostPerUserM12", "tokenCostPerUserM18",
   "priceDecline18mo", "targetARR12", "reinvestPct",
+  "uofMarketing", "uofFounderPay", "uofInfra", "uofAgents", "uofReserve",
 ] as const;
 
 // ─── Defaults ────────────────────────────────────────────────────────
@@ -220,9 +241,22 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = {
   priceDecline18mo: 0.50,
   targetARR12: 4200000,
   reinvestPct: 1.0,
+  uofMarketing: 0.34,
+  uofFounderPay: 0.40,
+  uofInfra: 0.06,
+  uofAgents: 0.10,
+  uofReserve: 0.10,
   phases: DEFAULT_PHASES,
   partnerships: DEFAULT_PARTNERSHIPS,
   founders: DEFAULT_FOUNDERS,
+  actuals: [
+    { label: "Q1", mau: 0, paidUsers: 0, mrr: 0, revenue: 0, mktSpend: 0, founderPay: 0, infraCost: 0, tokenCost: 0, notes: "" },
+    { label: "Q2", mau: 0, paidUsers: 0, mrr: 0, revenue: 0, mktSpend: 0, founderPay: 0, infraCost: 0, tokenCost: 0, notes: "" },
+    { label: "Q3", mau: 0, paidUsers: 0, mrr: 0, revenue: 0, mktSpend: 0, founderPay: 0, infraCost: 0, tokenCost: 0, notes: "" },
+    { label: "Q4", mau: 0, paidUsers: 0, mrr: 0, revenue: 0, mktSpend: 0, founderPay: 0, infraCost: 0, tokenCost: 0, notes: "" },
+    { label: "Q5", mau: 0, paidUsers: 0, mrr: 0, revenue: 0, mktSpend: 0, founderPay: 0, infraCost: 0, tokenCost: 0, notes: "" },
+    { label: "Q6", mau: 0, paidUsers: 0, mrr: 0, revenue: 0, mktSpend: 0, founderPay: 0, infraCost: 0, tokenCost: 0, notes: "" },
+  ],
 };
 
 // ─── Supabase Persistence ────────────────────────────────────────────
@@ -237,6 +271,7 @@ export function toSupabaseRows(a: Assumptions): { key: string; value: string }[]
   rows.push({ key: "_founders_json", value: JSON.stringify(a.founders) });
   rows.push({ key: "_phases_json", value: JSON.stringify(a.phases) });
   rows.push({ key: "_partnerships_json", value: JSON.stringify(a.partnerships) });
+  rows.push({ key: "_actuals_json", value: JSON.stringify(a.actuals) });
   return rows;
 }
 
@@ -249,6 +284,8 @@ export function fromSupabaseRows(rows: { key: string; value: string }[], base: A
       try { a.phases = JSON.parse(row.value); } catch { /* use default */ }
     } else if (row.key === "_partnerships_json") {
       try { a.partnerships = JSON.parse(row.value); } catch { /* use default */ }
+    } else if (row.key === "_actuals_json") {
+      try { a.actuals = JSON.parse(row.value); } catch { /* use default */ }
     } else if (SCALAR_KEYS.includes(row.key as typeof SCALAR_KEYS[number])) {
       (a as Record<string, unknown>)[row.key] = Number(row.value);
     }

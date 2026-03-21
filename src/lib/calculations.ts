@@ -85,6 +85,12 @@ export interface Calculations {
   breakEvenMonth: number;
   totalPartnerUsers: number;
   totalReinvested: number;
+  // UOF dollar amounts
+  uofMktDollars: number;
+  uofFounderDollars: number;
+  uofInfraDollars: number;
+  uofAgentsDollars: number;
+  uofReserveDollars: number;
 }
 
 // ─── Blended ARPU by tier mix ────────────────────────────────────────
@@ -241,13 +247,21 @@ export function computeAll(a: Assumptions): Calculations {
   const tokenCosts = [a.tokenCostPerUserM6, a.tokenCostPerUserM6, a.tokenCostPerUserM12, a.tokenCostPerUserM12, a.tokenCostPerUserM18, a.tokenCostPerUserM18];
   let totalReinvested = 0;
 
+  // UOF-derived budgets: raise × category% spread with phase ramp
+  // Phase ramp weights: [0.5, 1.0, 1.5] so early phases spend less, later more
+  const rampWeights = [0.5, 0.5, 1.0, 1.0, 1.5, 1.5]; // per quarter
+  const rampWeightSum = rampWeights.reduce((s, w) => s + w, 0);
+  const totalMktFromRaise = a.raise * a.uofMarketing;
+  const totalFounderFromRaise = a.raise * a.uofFounderPay;
+  const totalInfraFromRaise = a.raise * a.uofInfra;
+
   for (let qi = 0; qi < 6; qi++) {
     const phaseIdx = Math.floor(qi / 2);
     const phase = a.phases[phaseIdx];
     const isFirstQtrOfPhase = qi % 2 === 0;
 
-    // Marketing: base budget + reinvested surplus from prior quarter
-    const baseMkt = phase.monthlyMktBudget * 3;
+    // Marketing: UOF-derived base + reinvested surplus from prior quarter
+    const baseMkt = Math.round(totalMktFromRaise * rampWeights[qi] / rampWeightSum);
     const reinvestMkt = reinvestCarry;
     reinvestCarry = 0;
     const totalMkt = baseMkt + reinvestMkt;
@@ -274,19 +288,20 @@ export function computeAll(a: Assumptions): Calculations {
     const mrr = paidUsers * arpu;
     const qRev = Math.round(mrr * 3);
 
-    // Costs
+    // Costs — founder pay & infra also UOF-derived with ramp
     const qToken = Math.round(cumulativeMAU * tokenCosts[qi] * 3);
-    const qFounder = phase.founderPayMonthly * 3;
-    const qInfra = phase.infraMonthly * 3;
+    const qFounder = Math.round(totalFounderFromRaise * rampWeights[qi] / rampWeightSum);
+    const qInfra = Math.round(totalInfraFromRaise * rampWeights[qi] / rampWeightSum);
     const totalCost = qToken + qFounder + totalMkt + qInfra;
     const net = qRev - totalCost;
 
-    // Reinvestment: surplus after opex and base marketing → next quarter's marketing
-    const opex = qToken + qFounder + qInfra;
-    const surplus = qRev - opex - baseMkt;
-    reinvestCarry = Math.max(0, Math.round(surplus * a.reinvestPct));
-
     cashPos += net;
+
+    // Reinvestment: deploy a share of remaining cash into next quarter's marketing
+    // "Once we pay all operational costs, the rest goes back into marketing"
+    const remainingQuarters = Math.max(1, 6 - qi - 1); // quarters left after this one
+    const deployableCash = Math.max(0, cashPos);
+    reinvestCarry = Math.round(deployableCash * a.reinvestPct / remainingQuarters);
 
     quarters.push({
       label: `Q${qi + 1}`,
@@ -356,6 +371,11 @@ export function computeAll(a: Assumptions): Calculations {
     breakEvenMonth,
     totalPartnerUsers: partnerM6 + partnerM12 + partnerM18,
     totalReinvested,
+    uofMktDollars: Math.round(a.raise * a.uofMarketing),
+    uofFounderDollars: Math.round(a.raise * a.uofFounderPay),
+    uofInfraDollars: Math.round(a.raise * a.uofInfra),
+    uofAgentsDollars: Math.round(a.raise * a.uofAgents),
+    uofReserveDollars: Math.round(a.raise * a.uofReserve),
   };
 }
 
