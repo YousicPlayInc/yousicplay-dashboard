@@ -30,3 +30,22 @@ on conflict (key) do nothing;
 create policy "Allow anonymous read" on assumptions for select using (true);
 create policy "Allow anonymous insert" on assumptions for insert with check (true);
 create policy "Allow anonymous update" on assumptions for update using (true);
+
+-- ─── Access Control ─────────────────────────────────────────────────
+-- Allowed emails table: only these users can access the dashboard
+create table if not exists allowed_emails (
+  id uuid primary key default gen_random_uuid(),
+  email text unique not null,
+  added_at timestamp with time zone default now()
+);
+
+-- Enable RLS on allowed_emails
+alter table allowed_emails enable row level security;
+create policy "Allow authenticated read" on allowed_emails for select using (true);
+
+-- Seed allowed emails
+insert into allowed_emails (email) values
+  ('alain@yousicplay.com'),
+  ('gregg@yousicplay.com'),
+  ('sean@yousicplay.com')
+on conflict (email) do nothing;
