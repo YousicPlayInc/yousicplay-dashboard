@@ -35,10 +35,14 @@ export interface QuarterData {
   token: number;
   founder: number;
   mkt: number;
+  reinvestMkt: number;
   infra: number;
   totalCost: number;
   net: number;
   cash: number;
+  mau: number;
+  paidUsers: number;
+  mrr: number;
 }
 
 export interface Calculations {
@@ -80,6 +84,7 @@ export interface Calculations {
   grossMarginM18: number;
   breakEvenMonth: number;
   totalPartnerUsers: number;
+  totalReinvested: number;
 }
 
 // ─── Blended ARPU by tier mix ────────────────────────────────────────
@@ -88,6 +93,18 @@ function blendedArpu(a: Assumptions, studioPct: number): number {
   const proPct = 1 - studioPct;
   return proPct * (0.6 * a.proMonthly + 0.4 * a.proAnnual / 12)
        + studioPct * (0.6 * a.studioMonthly + 0.4 * a.studioAnnual / 12);
+}
+
+// Active users generated per dollar of marketing spend (with viral amplification)
+function activeUsersPerDollar(phase: PhaseConfig, viralK: number): number {
+  const K = Math.min(viralK, 0.95);
+  let aPerD = 0;
+  for (const ch of phase.channels) {
+    if (ch.cpa > 0) {
+      aPerD += (ch.budgetPct / ch.cpa) * ch.signupToActiveRate;
+    }
+  }
+  return aPerD / (1 - K);
 }
 
 // ─── Compute phase users from channels ──────────────────────────────
@@ -211,31 +228,64 @@ export function computeAll(a: Assumptions): Calculations {
   const tradHeadcount = 14;
   const tradCost = 1500000;
 
-  // ─── Quarterly Cash Flow (derived, not hardcoded) ──────────────────
-  // 6 quarters, each 3 months. Linearly interpolate within each phase.
+  // ─── Quarterly Cash Flow: Forward Simulation with Reinvestment ──────
+  // Revenue earned each quarter can be reinvested into marketing,
+  // creating a compounding growth loop.
+
   const quarters: QuarterData[] = [];
   let cashPos = a.raise;
+  let cumulativeMAU = 0;
+  let reinvestCarry = 0; // surplus from prior quarter to reinvest
+  const retainRate3mo = Math.pow(1 - a.churn, 3);
+  const studioPcts = [0.15, 0.15, 0.25, 0.25, 0.35, 0.35];
+  const tokenCosts = [a.tokenCostPerUserM6, a.tokenCostPerUserM6, a.tokenCostPerUserM12, a.tokenCostPerUserM12, a.tokenCostPerUserM18, a.tokenCostPerUserM18];
+  let totalReinvested = 0;
 
   for (let qi = 0; qi < 6; qi++) {
-    const phaseIdx = Math.floor(qi / 2); // 0,0,1,1,2,2
-    const isSecondHalf = qi % 2 === 1;
+    const phaseIdx = Math.floor(qi / 2);
     const phase = a.phases[phaseIdx];
-    const phaseResult = phases[phaseIdx];
+    const isFirstQtrOfPhase = qi % 2 === 0;
 
-    // Revenue ramps within phase: Q1 of phase = ~40% of phase MRR, Q2 = ~70%
-    // (users accumulate through the phase)
-    const mrrFraction = isSecondHalf ? 0.85 : 0.40;
-    const mauFraction = isSecondHalf ? 0.85 : 0.45;
+    // Marketing: base budget + reinvested surplus from prior quarter
+    const baseMkt = phase.monthlyMktBudget * 3;
+    const reinvestMkt = reinvestCarry;
+    reinvestCarry = 0;
+    const totalMkt = baseMkt + reinvestMkt;
+    totalReinvested += reinvestMkt;
 
-    const qRev = Math.round(phaseResult.mrr * mrrFraction * 3);
-    const qMau = phaseResult.totalActiveUsers * mauFraction;
-    const tokenCostPerUser = [a.tokenCostPerUserM6, a.tokenCostPerUserM12, a.tokenCostPerUserM18][phaseIdx];
-    const qToken = Math.round(qMau * tokenCostPerUser * 3);
+    // New active users from marketing spend (using phase channel efficiency)
+    const efficiency = activeUsersPerDollar(phase, a.viralK);
+    const mktActive = Math.round(totalMkt * efficiency);
+
+    // Partnership users this quarter (split evenly across 2 quarters per phase)
+    const partnerPhaseUsers = [partnerM6, partnerM12, partnerM18][phaseIdx] || 0;
+    const partnerQtr = Math.round(partnerPhaseUsers * (isFirstQtrOfPhase ? 0.4 : 0.6));
+    const K = Math.min(a.viralK, 0.95);
+    const partnerActive = Math.round(partnerQtr * 0.30 * (1 + K / (1 - K)));
+
+    const newActive = mktActive + partnerActive;
+
+    // Apply quarterly churn to existing MAU, add new users
+    cumulativeMAU = Math.round(cumulativeMAU * retainRate3mo) + newActive;
+
+    // Revenue from current MAU
+    const arpu = blendedArpu(a, studioPcts[qi]);
+    const paidUsers = Math.round(cumulativeMAU * a.convRate);
+    const mrr = paidUsers * arpu;
+    const qRev = Math.round(mrr * 3);
+
+    // Costs
+    const qToken = Math.round(cumulativeMAU * tokenCosts[qi] * 3);
     const qFounder = phase.founderPayMonthly * 3;
-    const qMkt = phase.monthlyMktBudget * 3;
     const qInfra = phase.infraMonthly * 3;
-    const totalCost = qToken + qFounder + qMkt + qInfra;
+    const totalCost = qToken + qFounder + totalMkt + qInfra;
     const net = qRev - totalCost;
+
+    // Reinvestment: surplus after opex and base marketing → next quarter's marketing
+    const opex = qToken + qFounder + qInfra;
+    const surplus = qRev - opex - baseMkt;
+    reinvestCarry = Math.max(0, Math.round(surplus * a.reinvestPct));
+
     cashPos += net;
 
     quarters.push({
@@ -243,25 +293,40 @@ export function computeAll(a: Assumptions): Calculations {
       rev: qRev,
       token: qToken,
       founder: qFounder,
-      mkt: qMkt,
+      mkt: baseMkt,
+      reinvestMkt,
       infra: qInfra,
       totalCost,
       net,
       cash: cashPos,
+      mau: cumulativeMAU,
+      paidUsers,
+      mrr,
     });
   }
+
+  // Derive milestone metrics from simulation (end of Q2, Q4, Q6)
+  const simMauM6 = quarters[1]?.mau || 0;
+  const simMauM12 = quarters[3]?.mau || 0;
+  const simMauM18 = quarters[5]?.mau || 0;
+  const simPaidM6 = quarters[1]?.paidUsers || 0;
+  const simPaidM12 = quarters[3]?.paidUsers || 0;
+  const simPaidM18 = quarters[5]?.paidUsers || 0;
+  const simMrrM6 = quarters[1]?.mrr || 0;
+  const simMrrM12 = quarters[3]?.mrr || 0;
+  const simMrrM18 = quarters[5]?.mrr || 0;
 
   const totalRev = quarters.reduce((s, q) => s + q.rev, 0);
   const totalCostSum = quarters.reduce((s, q) => s + q.totalCost, 0);
 
-  // CAC = total marketing spend / total signups acquired (derived)
-  const totalMktSpend = a.phases.reduce((s, p) => s + p.monthlyMktBudget * p.months, 0);
+  // CAC = total marketing spend (base + reinvested) / total signups
+  const totalMktSpend = quarters.reduce((s, q) => s + q.mkt + q.reinvestMkt, 0);
   const totalDirectSignups = phases.reduce((s, p) => s + p.directSignups, 0);
   const cac = totalDirectSignups > 0 ? totalMktSpend / totalDirectSignups : 0;
 
   const ltv = arpuM12 / a.churn;
 
-  // Break-even month: find first quarter where net > 0
+  // Break-even month: first quarter where net > 0
   let breakEvenMonth = 18;
   for (let i = 0; i < quarters.length; i++) {
     if (quarters[i].net > 0) {
@@ -272,13 +337,17 @@ export function computeAll(a: Assumptions): Calculations {
 
   return {
     phases,
-    mauM6, mauM12, mauM18,
-    paidM6, paidM12, paidM18,
-    mrrM6, mrrM12, mrrM18,
-    arrM6: mrrM6 * 12, arrM12: mrrM12 * 12, arrM18: mrrM18 * 12,
+    // Use simulation-derived metrics (includes reinvestment compounding)
+    mauM6: simMauM6, mauM12: simMauM12, mauM18: simMauM18,
+    paidM6: simPaidM6, paidM12: simPaidM12, paidM18: simPaidM18,
+    mrrM6: simMrrM6, mrrM12: simMrrM12, mrrM18: simMrrM18,
+    arrM6: simMrrM6 * 12, arrM12: simMrrM12 * 12, arrM18: simMrrM18 * 12,
     blendedArpuM6: arpuM6, blendedArpuM12: arpuM12, blendedArpuM18: arpuM18,
     totalSignupsM6: cumSignupsM6, totalSignupsM12: cumSignupsM12, totalSignupsM18: cumSignupsM18,
-    tokenM6, tokenM12, tokenM18, tokenAdj18,
+    tokenM6: simMauM6 * a.tokenCostPerUserM6,
+    tokenM12: simMauM12 * a.tokenCostPerUserM12,
+    tokenM18: simMauM18 * a.tokenCostPerUserM18,
+    tokenAdj18: simMauM18 * a.tokenCostPerUserM18 * a.priceDecline18mo,
     totalAgents, founderCount, totalAgentCostMo, tradHeadcount, tradCost,
     cashFlow: quarters,
     totalRev, totalCost: totalCostSum,
@@ -286,6 +355,7 @@ export function computeAll(a: Assumptions): Calculations {
     grossMarginM18: 1 - (a.tokenCostPerUserM18 / arpuM18),
     breakEvenMonth,
     totalPartnerUsers: partnerM6 + partnerM12 + partnerM18,
+    totalReinvested,
   };
 }
 

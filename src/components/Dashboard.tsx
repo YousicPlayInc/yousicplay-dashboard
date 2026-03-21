@@ -400,7 +400,16 @@ export default function Dashboard() {
                 <Input label="Free→Paid Conv %" value={(a.convRate * 100).toFixed(1)} onChange={(v) => u("convRate")(v / 100)} suffix="%" />
                 <Input label="Monthly Churn %" value={(a.churn * 100).toFixed(1)} onChange={(v) => u("churn")(v / 100)} suffix="%" />
                 <Input label="Viral K-Factor" value={a.viralK} onChange={u("viralK")} />
+                <Input label="Revenue → Mkt Reinvest %" value={(a.reinvestPct * 100).toFixed(0)} onChange={(v) => u("reinvestPct")(v / 100)} suffix="%" />
               </div>
+              {a.reinvestPct > 0 && (
+                <div className="mt-3 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-sm">
+                  <span className="text-emerald-400 font-medium">{(a.reinvestPct * 100).toFixed(0)}% of surplus</span>
+                  <span className="text-slate-400"> (revenue minus opex &amp; base marketing) reinvested into growth each quarter. </span>
+                  <span className="text-white font-mono">{currency(calc.totalReinvested)}</span>
+                  <span className="text-slate-400"> total reinvested over 18mo.</span>
+                </div>
+              )}
             </Card>
 
             <Card title="Derived User Growth (from marketing channels)">
@@ -599,19 +608,22 @@ export default function Dashboard() {
               </div>
             </Card>
 
-            <Card title="Quarterly P&L (derived)">
-              <div className="overflow-x-auto -mx-4 px-4"><table className="w-full text-sm min-w-[600px]">
+            <Card title="Quarterly P&L (derived — with reinvestment)">
+              <div className="overflow-x-auto -mx-4 px-4"><table className="w-full text-sm min-w-[750px]">
                 <thead><tr className="text-xs text-slate-400 border-b border-slate-700">
-                  <th className="text-left py-2">Quarter</th><th className="text-right py-2">Revenue</th><th className="text-right py-2">Tokens</th><th className="text-right py-2">Founders</th><th className="text-right py-2">Marketing</th><th className="text-right py-2">Total Cost</th><th className="text-right py-2">Net</th><th className="text-right py-2">Cash</th>
+                  <th className="text-left py-2">Quarter</th><th className="text-right py-2">MAU</th><th className="text-right py-2">Paid</th><th className="text-right py-2">Revenue</th><th className="text-right py-2">Tokens</th><th className="text-right py-2">Founders</th><th className="text-right py-2">Base Mkt</th><th className="text-right py-2">Reinvest</th><th className="text-right py-2">Total Cost</th><th className="text-right py-2">Net</th><th className="text-right py-2">Cash</th>
                 </tr></thead>
                 <tbody>
                   {calc.cashFlow.map((q, i) => (
                     <tr key={i} className="border-b border-slate-800">
                       <td className="py-2 font-medium">{q.label}</td>
+                      <td className="py-2 text-right font-mono text-slate-300">{num(q.mau)}</td>
+                      <td className="py-2 text-right font-mono text-slate-300">{num(q.paidUsers)}</td>
                       <td className="py-2 text-right font-mono text-emerald-400">{currency(q.rev)}</td>
                       <td className="py-2 text-right font-mono">{currency(q.token)}</td>
                       <td className="py-2 text-right font-mono">{currency(q.founder)}</td>
                       <td className="py-2 text-right font-mono">{currency(q.mkt)}</td>
+                      <td className={`py-2 text-right font-mono ${q.reinvestMkt > 0 ? "text-blue-400" : "text-slate-600"}`}>{currency(q.reinvestMkt)}</td>
                       <td className="py-2 text-right font-mono text-red-400">{currency(q.totalCost)}</td>
                       <td className={`py-2 text-right font-mono font-bold ${q.net >= 0 ? "text-emerald-400" : "text-red-400"}`}>{currency(q.net)}</td>
                       <td className={`py-2 text-right font-mono ${q.cash >= 0 ? "text-white" : "text-red-400"}`}>{currency(q.cash)}</td>

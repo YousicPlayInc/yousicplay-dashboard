@@ -64,6 +64,7 @@ export interface Assumptions {
   tokenCostPerUserM18: number;
   priceDecline18mo: number;
   targetARR12: number;
+  reinvestPct: number;
   phases: PhaseConfig[];
   partnerships: PartnershipConfig[];
   founders: FounderConfig[];
@@ -74,7 +75,7 @@ export const SCALAR_KEYS = [
   "raise", "proMonthly", "proAnnual", "studioMonthly", "studioAnnual",
   "convRate", "churn", "viralK",
   "tokenCostPerUserM6", "tokenCostPerUserM12", "tokenCostPerUserM18",
-  "priceDecline18mo", "targetARR12",
+  "priceDecline18mo", "targetARR12", "reinvestPct",
 ] as const;
 
 // ─── Defaults ────────────────────────────────────────────────────────
@@ -218,6 +219,7 @@ export const DEFAULT_ASSUMPTIONS: Assumptions = {
   tokenCostPerUserM18: 0.46,
   priceDecline18mo: 0.50,
   targetARR12: 4200000,
+  reinvestPct: 1.0,
   phases: DEFAULT_PHASES,
   partnerships: DEFAULT_PARTNERSHIPS,
   founders: DEFAULT_FOUNDERS,
