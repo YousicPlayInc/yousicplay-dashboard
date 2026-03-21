@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_ASSUMPTIONS, SCALAR_KEYS, fromSupabaseRows, type Assumptions, type FounderConfig, type AgentConfig, type PartnershipConfig, type PhaseConfig, type GtmMotion, type ChannelAllocation } from "@/lib/defaults";
-import { computeAll } from "@/lib/calculations";
+import { computeAll, reverseEngineer } from "@/lib/calculations";
 import { currency, pct, num } from "@/lib/format";
 import { Card, Metric, Input, TextInput, AddButton, RemoveButton, EditToggle, StatusBadge, StatusSelect } from "@/components/ui";
 
@@ -120,6 +120,20 @@ export default function Dashboard() {
   }, [persistKey]);
 
   const calc = useMemo(() => computeAll(a), [a]);
+  const reverse = useMemo(() => reverseEngineer(a), [a]);
+
+  // Apply recommended budgets and raise from reverse engineering
+  const applyRecommended = useCallback(() => {
+    // Scale marketing budgets
+    updatePhases((phases) => {
+      for (let i = 0; i < phases.length; i++) {
+        phases[i].monthlyMktBudget = reverse.scaledBudgets[i]?.monthly ?? phases[i].monthlyMktBudget;
+      }
+      return phases;
+    });
+    // Set raise
+    u("raise")(reverse.requiredRaise);
+  }, [reverse, updatePhases, u]);
 
   const PHASE_LABELS = a.phases.map((p, i) => {
     const startMonth = a.phases.slice(0, i).reduce((s, pp) => s + pp.months, 0);
@@ -166,6 +180,76 @@ export default function Dashboard() {
         {/* ═══ TAB 0: INFLECTION POINTS ═══ */}
         {tab === 0 && (
           <div className="space-y-6">
+
+            {/* Reverse Engineering: Target → Required Raise */}
+            <div className="bg-gradient-to-r from-blue-900/30 to-slate-800 rounded-xl border border-blue-500/30 p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Reverse-Engineered from Target</p>
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-4">
+                    <div>
+                      <label className="text-xs text-slate-400 font-medium block mb-1">Target M12 ARR</label>
+                      <div className="flex items-center bg-slate-950 border border-slate-600 rounded px-3 py-1.5">
+                        <span className="text-amber-400 text-sm mr-1">$</span>
+                        <input type="number" value={a.targetARR12} onChange={(e) => u("targetARR12")(parseFloat(e.target.value) || 0)} className="bg-transparent text-amber-400 text-lg font-bold w-36 outline-none font-mono" />
+                      </div>
+                    </div>
+                    <div className="text-sm text-slate-400">
+                      Current projection: <span className={`font-mono font-bold ${calc.arrM12 >= a.targetARR12 ? "text-emerald-400" : "text-red-400"}`}>{currency(calc.arrM12)}</span>
+                      {calc.arrM12 < a.targetARR12 && <span className="text-red-400 ml-1">({currency(a.targetARR12 - calc.arrM12)} gap)</span>}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
+                    <div>
+                      <p className="text-xs text-slate-400">Required Raise</p>
+                      <p className="text-lg font-bold font-mono text-emerald-400">{currency(reverse.requiredRaise)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Total Mkt Spend (18mo)</p>
+                      <p className="text-lg font-bold font-mono text-white">{currency(reverse.totalMktSpend18mo)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Projected M12 ARR</p>
+                      <p className="text-lg font-bold font-mono text-emerald-400">{currency(reverse.projected.arrM12)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400">Budget Multiplier</p>
+                      <p className="text-lg font-bold font-mono text-white">{reverse.multiplier.toFixed(1)}×</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 mb-4">
+                    <p className="text-xs text-slate-400 uppercase tracking-wide">Required Monthly Marketing Budgets</p>
+                    {reverse.scaledBudgets.map((b, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="text-slate-400">{b.label} ({PHASE_LABELS[i] || `Phase ${i+1}`})</span>
+                        <span className="font-mono text-white">{currency(b.monthly)}/mo <span className="text-slate-400">({currency(b.total)} total)</span></span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <button onClick={applyRecommended} className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+                      Apply Recommended Budgets &amp; Raise
+                    </button>
+                    <p className="text-xs text-slate-400">Sets raise to {currency(reverse.requiredRaise)} and scales all phase marketing budgets</p>
+                  </div>
+                </div>
+
+                <div className="sm:w-48 bg-slate-900/60 rounded-lg p-3 border border-slate-700 space-y-2">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide">At Target</p>
+                  <div className="flex justify-between text-sm"><span className="text-slate-400">MAU</span><span className="font-mono">{num(reverse.projected.mauM12)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-slate-400">Paid</span><span className="font-mono text-emerald-400">{num(reverse.projected.paidM12)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-slate-400">MRR</span><span className="font-mono text-emerald-400">{currency(reverse.projected.mrrM12)}</span></div>
+                  <div className="border-t border-slate-700 my-1" />
+                  <div className="flex justify-between text-sm"><span className="text-slate-400">18mo Rev</span><span className="font-mono">{currency(reverse.projected.totalRev)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-slate-400">18mo Cost</span><span className="font-mono text-red-400">{currency(reverse.projected.totalCost)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-slate-400">Break-Even</span><span className="font-mono">M{reverse.projected.breakEvenMonth}</span></div>
+                </div>
+              </div>
+            </div>
+
             <Card title="Pricing Tiers">
               <p className="text-xs text-slate-400 mb-3">14-day full Pro trial on signup. No payment upfront.</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">

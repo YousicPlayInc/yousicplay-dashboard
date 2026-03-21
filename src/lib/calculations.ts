@@ -288,3 +288,93 @@ export function computeAll(a: Assumptions): Calculations {
     totalPartnerUsers: partnerM6 + partnerM12 + partnerM18,
   };
 }
+
+// ─── Reverse Engineering: Target ARR → Required Raise ───────────────
+
+export interface ReverseResult {
+  multiplier: number;
+  scaledBudgets: { label: string; monthly: number; total: number }[];
+  totalMktSpend18mo: number;
+  requiredRaise: number;
+  projected: Calculations;
+}
+
+export function reverseEngineer(a: Assumptions): ReverseResult {
+  const K = Math.min(a.viralK, 0.95);
+  const retainRate6mo = Math.pow(1 - a.churn, 6);
+  const arpu12 = blendedArpu(a, 0.25); // 25% studio mix at M12
+
+  // Required MAU at M12 to hit target ARR
+  const requiredMAU = a.targetARR12 / (12 * a.convRate * arpu12);
+
+  // Per-phase efficiency: how many active users per dollar of marketing spend
+  function phaseEfficiency(phase: PhaseConfig) {
+    let signupsPerDollar = 0;
+    let activePerDollar = 0;
+    for (const ch of phase.channels) {
+      if (ch.cpa > 0) {
+        signupsPerDollar += ch.budgetPct / ch.cpa;
+        activePerDollar += (ch.budgetPct / ch.cpa) * ch.signupToActiveRate;
+      }
+    }
+    const globalRate = signupsPerDollar > 0 ? activePerDollar / signupsPerDollar : 0.30;
+    return { activePerDollar, globalRate };
+  }
+
+  const eff0 = phaseEfficiency(a.phases[0]);
+  const eff1 = a.phases.length > 1 ? phaseEfficiency(a.phases[1]) : eff0;
+
+  // Partner contributions (independent of marketing spend)
+  const partnerM6 = a.partnerships.reduce((s, p) => s + p.usersM6, 0);
+  const partnerM12 = a.partnerships.reduce((s, p) => s + p.usersM12, 0);
+  const pf0 = partnerM6 * (0.30 + eff0.globalRate * K / (1 - K));
+  const pf1 = partnerM12 * (0.30 + eff1.globalRate * K / (1 - K));
+
+  // Current phase spends
+  const spend0 = a.phases[0].monthlyMktBudget * a.phases[0].months;
+  const spend1 = a.phases.length > 1 ? a.phases[1].monthlyMktBudget * a.phases[1].months : 0;
+
+  // MAU at M12 = (phase1Active × retainRate) + phase2Active
+  // where phaseActive = spend × activePerDollar / (1-K) + partnerFixed
+  // Solve: requiredMAU = k × [spend0 × eff0/(1-K) × retain + spend1 × eff1/(1-K)]
+  //                     + [pf0 × retain + pf1]
+  const mktCoeff = spend0 * eff0.activePerDollar / (1 - K) * retainRate6mo
+                 + spend1 * eff1.activePerDollar / (1 - K);
+  const partnerFixed = pf0 * retainRate6mo + pf1;
+
+  const k = mktCoeff > 0 ? (requiredMAU - partnerFixed) / mktCoeff : 1;
+  const multiplier = Math.max(k, 0.1); // floor at 10%
+
+  // Create scaled assumptions
+  const scaledA = JSON.parse(JSON.stringify(a)) as Assumptions;
+  for (let i = 0; i < scaledA.phases.length; i++) {
+    scaledA.phases[i].monthlyMktBudget = Math.round(a.phases[i].monthlyMktBudget * multiplier);
+  }
+
+  // Run full model with scaled budgets to get accurate costs/revenue
+  const projected = computeAll(scaledA);
+
+  // Required raise = peak cumulative cash deficit + 10% buffer
+  // q.net = q.rev - q.totalCost (independent of raise)
+  let minCum = 0;
+  let cum = 0;
+  for (const q of projected.cashFlow) {
+    cum += q.net;
+    if (cum < minCum) minCum = cum;
+  }
+  const requiredRaise = Math.max(0, Math.ceil(-minCum * 1.10 / 1000) * 1000);
+
+  const totalMktSpend18mo = scaledA.phases.reduce((s, p) => s + p.monthlyMktBudget * p.months, 0);
+
+  return {
+    multiplier,
+    scaledBudgets: scaledA.phases.map((p, i) => ({
+      label: `Phase ${i + 1}`,
+      monthly: p.monthlyMktBudget,
+      total: p.monthlyMktBudget * p.months,
+    })),
+    totalMktSpend18mo,
+    requiredRaise,
+    projected,
+  };
+}
