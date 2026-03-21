@@ -86,29 +86,24 @@ export default function Dashboard() {
   const [tab, setTab] = useState(0);
   const [a, setA] = useState<Assumptions>({ ...DEFAULT_ASSUMPTIONS });
   const [loaded, setLoaded] = useState(false);
-  const [dbStatus, setDbStatus] = useState<string>("");
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   // Load assumptions from Supabase on mount
   useEffect(() => {
     async function load() {
-      if (!supabase) { setDbStatus("⚠ No Supabase client"); setLoaded(true); return; }
+      if (!supabase) { setLoaded(true); return; }
       try {
         const { data, error } = await supabase.from("assumptions").select("key, value");
         if (error) {
-          setDbStatus(`⚠ Load error: ${error.message}`);
         } else if (data && data.length > 0) {
           const fromDb: Assumptions = { ...DEFAULT_ASSUMPTIONS };
           data.forEach((row: { key: string; value: number }) => {
             fromDb[row.key] = Number(row.value);
           });
           setA(fromDb);
-          setDbStatus(`✓ Loaded ${data.length} values`);
         } else {
-          setDbStatus("⚠ No data in table");
         }
       } catch (e) {
-        setDbStatus(`⚠ Exception: ${e}`);
       }
       setLoaded(true);
     }
@@ -147,12 +142,10 @@ export default function Dashboard() {
           .from("assumptions")
           .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: "key" });
         if (error) {
-          setDbStatus(`⚠ Save error: ${error.message}`);
-        } else {
-          setDbStatus(`✓ Saved ${key}`);
+          console.error("Save error:", error.message);
         }
       } catch (e) {
-        setDbStatus(`⚠ Save exception: ${e}`);
+        console.error("Save exception:", e);
       }
     }, 500);
   }, []);
@@ -215,7 +208,6 @@ export default function Dashboard() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Yousic Play</h1>
             <p className="text-sm text-slate-400">Pre-Seed Financial Model &amp; Launch Dashboard</p>
-            {dbStatus && <p className="text-xs text-yellow-400 font-mono">{dbStatus}</p>}
           </div>
           <div className="flex gap-4 text-center">
             <Metric label="Raise" value={currency(a.raise)} />
