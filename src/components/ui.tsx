@@ -55,15 +55,15 @@ export function Input({
   return (
     <div className={`flex flex-col ${small ? "gap-0.5" : "gap-1"}`}>
       {label && <label className="text-xs text-slate-400 font-medium">{label}</label>}
-      <div className="flex items-center bg-slate-800 border border-slate-600 rounded px-2 py-1">
-        {prefix && <span className="text-white text-sm mr-1">{prefix}</span>}
+      <div className="flex items-center bg-slate-950 border border-slate-600 rounded px-2 py-1">
+        {prefix && <span className="text-blue-400 text-sm mr-1">{prefix}</span>}
         <input
           type="number"
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          className="bg-transparent text-white text-sm w-full outline-none font-mono"
+          className="bg-transparent text-blue-400 text-sm w-full outline-none font-mono"
         />
-        {suffix && <span className="text-white text-sm ml-1">{suffix}</span>}
+        {suffix && <span className="text-blue-400 text-sm ml-1">{suffix}</span>}
       </div>
     </div>
   );
