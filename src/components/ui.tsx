@@ -5,7 +5,7 @@ import React from "react";
 export function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-4">
-      {title && <h3 className="text-sm font-semibold text-blue-400 mb-3 uppercase tracking-wide">{title}</h3>}
+      {title && <h3 className="text-sm font-semibold text-white mb-3 uppercase tracking-wide">{title}</h3>}
       {children}
     </div>
   );
@@ -56,14 +56,14 @@ export function Input({
     <div className={`flex flex-col ${small ? "gap-0.5" : "gap-1"}`}>
       {label && <label className="text-xs text-slate-400 font-medium">{label}</label>}
       <div className="flex items-center bg-slate-800 border border-slate-600 rounded px-2 py-1">
-        {prefix && <span className="text-blue-400 text-sm mr-1">{prefix}</span>}
+        {prefix && <span className="text-white text-sm mr-1">{prefix}</span>}
         <input
           type="number"
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          className="bg-transparent text-blue-400 text-sm w-full outline-none font-mono"
+          className="bg-transparent text-white text-sm w-full outline-none font-mono"
         />
-        {suffix && <span className="text-blue-400 text-sm ml-1">{suffix}</span>}
+        {suffix && <span className="text-white text-sm ml-1">{suffix}</span>}
       </div>
     </div>
   );
@@ -72,7 +72,7 @@ export function Input({
 export function StatusBadge({ status }: { status: string }) {
   const s: Record<string, string> = {
     hit: "bg-blue-400/20 text-emerald-400",
-    on_track: "bg-blue-500/20 text-blue-400",
+    on_track: "bg-blue-500/20 text-white",
     at_risk: "bg-yellow-500/20 text-yellow-400",
     miss: "bg-red-500/20 text-red-400",
   };

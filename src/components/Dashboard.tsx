@@ -223,7 +223,7 @@ export default function Dashboard() {
               onClick={() => setTab(i)}
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 tab === i
-                  ? "border-blue-500 text-blue-400"
+                  ? "border-blue-500 text-white"
                   : "border-transparent text-slate-400 hover:text-slate-200"
               }`}
             >
@@ -251,21 +251,21 @@ export default function Dashboard() {
                   <p className="text-xs text-slate-400 mt-2">Assessment + limited experience</p>
                 </div>
                 <div className="bg-slate-800 rounded-lg p-3 border border-blue-500/40">
-                  <p className="text-xs text-blue-400 uppercase tracking-wide">Pro</p>
+                  <p className="text-xs text-white uppercase tracking-wide">Pro</p>
                   <div className="flex items-baseline gap-2 mt-1">
                     <span className="text-lg font-bold font-mono text-white">${a.proMonthly}</span>
                     <span className="text-xs text-slate-400">/mo</span>
                   </div>
-                  <p className="text-xs text-blue-400">${a.proAnnual}/yr (save 55%)</p>
+                  <p className="text-xs text-white">${a.proAnnual}/yr (save 55%)</p>
                   <p className="text-xs text-slate-400 mt-2">Full personalized growth system</p>
                 </div>
                 <div className="bg-slate-800 rounded-lg p-3 border border-blue-500/40">
-                  <p className="text-xs text-blue-400 uppercase tracking-wide">Studio</p>
+                  <p className="text-xs text-white uppercase tracking-wide">Studio</p>
                   <div className="flex items-baseline gap-2 mt-1">
                     <span className="text-lg font-bold font-mono text-white">${a.studioMonthly}</span>
                     <span className="text-xs text-slate-400">/mo</span>
                   </div>
-                  <p className="text-xs text-blue-400">${a.studioAnnual}/yr (save 42%)</p>
+                  <p className="text-xs text-white">${a.studioAnnual}/yr (save 42%)</p>
                   <p className="text-xs text-slate-400 mt-2">Community + performance layer</p>
                 </div>
               </div>
@@ -346,7 +346,7 @@ export default function Dashboard() {
               ].map((ip, i) => (
                 <Card key={i} title={ip.label}>
                   <p className="text-xs text-slate-500 mb-1">{ip.sub}</p>
-                  <p className="text-xs text-blue-400/70 mb-3 italic">{ip.bench}</p>
+                  <p className="text-xs text-white/70 mb-3 italic">{ip.bench}</p>
                   <div className="space-y-2">
                     <div className="flex justify-between"><span className="text-xs text-slate-400">Registered Users</span><span className="text-sm font-mono">{num(ip.users)}</span></div>
                     <div className="flex justify-between"><span className="text-xs text-slate-400">MAU</span><span className="text-sm font-mono">{num(ip.mau)}</span></div>
@@ -412,7 +412,7 @@ export default function Dashboard() {
                         <tr key={ai} className="border-b border-slate-800">
                           <td className="py-1.5 pr-4 font-medium">{ag.name}</td>
                           <td className="py-1.5 pr-4 text-slate-400">{ag.fn}</td>
-                          <td className="py-1.5 text-right font-mono text-blue-400">${ag.cost}</td>
+                          <td className="py-1.5 text-right font-mono text-white">${ag.cost}</td>
                         </tr>
                       ))}
                       <tr className="font-bold">
@@ -461,8 +461,8 @@ export default function Dashboard() {
                   ].map(([model, input, output, useCase], idx) => (
                     <tr key={idx} className="border-b border-slate-800">
                       <td className="py-1.5 font-medium">{model}</td>
-                      <td className="py-1.5 text-right font-mono text-blue-400">{input}</td>
-                      <td className="py-1.5 text-right font-mono text-blue-400">{output}</td>
+                      <td className="py-1.5 text-right font-mono text-white">{input}</td>
+                      <td className="py-1.5 text-right font-mono text-white">{output}</td>
                       <td className="py-1.5 pl-4 text-slate-400">{useCase}</td>
                     </tr>
                   ))}
@@ -479,7 +479,7 @@ export default function Dashboard() {
                 <Card key={i} title={p.label}>
                   <div className="space-y-2">
                     <div className="flex justify-between"><span className="text-xs text-slate-400">MAU</span><span className="font-mono">{num(p.mau)}</span></div>
-                    <div className="flex justify-between"><span className="text-xs text-slate-400">Cost/User/Mo</span><span className="font-mono text-blue-400">${p.cpu.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span className="text-xs text-slate-400">Cost/User/Mo</span><span className="font-mono text-white">${p.cpu.toFixed(2)}</span></div>
                     <div className="flex justify-between"><span className="text-xs text-slate-400">User-Facing Tokens</span><span className="font-mono">{currency(p.token)}</span></div>
                     <div className="flex justify-between"><span className="text-xs text-slate-400">Internal Agents</span><span className="font-mono">{currency(p.agent)}</span></div>
                     <div className="border-t border-slate-700 my-1" />
@@ -526,7 +526,7 @@ export default function Dashboard() {
                     </div>
                     <p className="text-xs text-slate-400 mb-3">{r.how}</p>
                     <div className="grid grid-cols-4 gap-3 text-sm">
-                      <div><span className="text-xs text-slate-500 block">Target</span><span className="text-blue-400 font-mono">{r.target}</span></div>
+                      <div><span className="text-xs text-slate-500 block">Target</span><span className="text-white font-mono">{r.target}</span></div>
                       <div><span className="text-xs text-slate-500 block">M6</span><span className="font-mono">{r.m6}</span></div>
                       <div><span className="text-xs text-slate-500 block">M12</span><span className="font-mono">{r.m12}</span></div>
                       <div><span className="text-xs text-slate-500 block">M18</span><span className="font-mono">{r.m18}</span></div>
@@ -583,7 +583,7 @@ export default function Dashboard() {
                         <td className="py-2 text-right font-mono">{currency(q.mkt)}</td>
                         <td className="py-2 text-right font-mono text-red-400">{currency(q.totalCost)}</td>
                         <td className={`py-2 text-right font-mono font-bold ${q.net >= 0 ? "text-emerald-400" : "text-red-400"}`}>{currency(q.net)}</td>
-                        <td className={`py-2 text-right font-mono ${q.cash >= 0 ? "text-blue-400" : "text-red-400"}`}>{currency(q.cash)}</td>
+                        <td className={`py-2 text-right font-mono ${q.cash >= 0 ? "text-white" : "text-red-400"}`}>{currency(q.cash)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -606,7 +606,7 @@ export default function Dashboard() {
               <div className="mb-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <div className="flex justify-between items-center">
                   <div>
-                    <span className="text-xs text-blue-400 uppercase tracking-wide">Inflection Point Target</span>
+                    <span className="text-xs text-white uppercase tracking-wide">Inflection Point Target</span>
                     <p className="text-sm text-white font-medium mt-0.5">First {num(calc.paidM6)} paid subscribers — prove willingness-to-pay</p>
                   </div>
                   <div className="text-right">
@@ -632,9 +632,9 @@ export default function Dashboard() {
                     <tr key={i} className="border-b border-slate-800">
                       <td className="py-2 font-medium">{motion}</td>
                       <td className="py-2 text-slate-400">{channel}</td>
-                      <td className="py-2 text-blue-400">{agent}</td>
+                      <td className="py-2 text-white">{agent}</td>
                       <td className="py-2 text-slate-300">{metric}</td>
-                      <td className="py-2 text-right font-mono text-blue-400">{budget}</td>
+                      <td className="py-2 text-right font-mono text-white">{budget}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -653,7 +653,7 @@ export default function Dashboard() {
               <div className="mb-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <div className="flex justify-between items-center">
                   <div>
-                    <span className="text-xs text-blue-400 uppercase tracking-wide">Inflection Point Target</span>
+                    <span className="text-xs text-white uppercase tracking-wide">Inflection Point Target</span>
                     <p className="text-sm text-white font-medium mt-0.5">{num(calc.paidM12)} paid users, unit economics validated, seed-raise ready</p>
                   </div>
                   <div className="text-right">
@@ -679,7 +679,7 @@ export default function Dashboard() {
                     <tr key={i} className="border-b border-slate-800">
                       <td className="py-2 font-medium">{motion}</td>
                       <td className="py-2 text-slate-400">{channel}</td>
-                      <td className="py-2 text-blue-400">{agent}</td>
+                      <td className="py-2 text-white">{agent}</td>
                       <td className="py-2 text-slate-300">{metric}</td>
                       <td className="py-2 text-right font-mono text-slate-300">{budget}</td>
                     </tr>
@@ -700,7 +700,7 @@ export default function Dashboard() {
               <div className="mb-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <div className="flex justify-between items-center">
                   <div>
-                    <span className="text-xs text-blue-400 uppercase tracking-wide">Inflection Point Target</span>
+                    <span className="text-xs text-white uppercase tracking-wide">Inflection Point Target</span>
                     <p className="text-sm text-white font-medium mt-0.5">{num(calc.paidM18)} paid users, approaching break-even, strong seed/A- position</p>
                   </div>
                   <div className="text-right">
@@ -726,7 +726,7 @@ export default function Dashboard() {
                     <tr key={i} className="border-b border-slate-800">
                       <td className="py-2 font-medium">{motion}</td>
                       <td className="py-2 text-slate-400">{channel}</td>
-                      <td className="py-2 text-blue-400">{agent}</td>
+                      <td className="py-2 text-white">{agent}</td>
                       <td className="py-2 text-slate-300">{metric}</td>
                       <td className="py-2 text-right font-mono text-slate-300">{budget}</td>
                     </tr>
@@ -771,7 +771,7 @@ export default function Dashboard() {
             <Card title="GTM Agents by Phase">
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <p className="text-blue-400 font-medium text-xs uppercase mb-2">Phase 1 (M0-M6): 6 Agents Active</p>
+                  <p className="text-white font-medium text-xs uppercase mb-2">Phase 1 (M0-M6): 6 Agents Active</p>
                   {["Social Media Agent", "SEO Agent", "Community Agent", "Video Agent", "Email Agent", "Influencer Agent"].map((ag, i) => (
                     <div key={i} className="flex items-center gap-2 py-1 border-b border-slate-800">
                       <span className="w-2 h-2 rounded-full bg-blue-500" />
@@ -780,7 +780,7 @@ export default function Dashboard() {
                   ))}
                 </div>
                 <div>
-                  <p className="text-blue-400 font-medium text-xs uppercase mb-2">Phase 2 (M6-M12): +3 Agents</p>
+                  <p className="text-white font-medium text-xs uppercase mb-2">Phase 2 (M6-M12): +3 Agents</p>
                   {["Ad Ops Agent", "PR Agent", "Partnerships Agent", "App Store Agent", "Analytics Agent (scaled)", "Curriculum Agent (SEO)"].map((ag, i) => (
                     <div key={i} className="flex items-center gap-2 py-1 border-b border-slate-800">
                       <span className={`w-2 h-2 rounded-full ${i < 3 ? "bg-blue-400" : "bg-blue-500/50"}`} />
@@ -789,7 +789,7 @@ export default function Dashboard() {
                   ))}
                 </div>
                 <div>
-                  <p className="text-blue-400 font-medium text-xs uppercase mb-2">Phase 3 (M12-M18): +2 Agents</p>
+                  <p className="text-white font-medium text-xs uppercase mb-2">Phase 3 (M12-M18): +2 Agents</p>
                   {["Localization Agent", "B2B Sales Agent", "IR Agent (fundraise)", "All Phase 1+2 agents", "Neuro Agent (partnerships)", "Growth Agent (viral v2)"].map((ag, i) => (
                     <div key={i} className="flex items-center gap-2 py-1 border-b border-slate-800">
                       <span className={`w-2 h-2 rounded-full ${i < 3 ? "bg-blue-300" : "bg-blue-400/50"}`} />
@@ -830,7 +830,7 @@ export default function Dashboard() {
                     <tr key={i} className="border-b border-slate-800">
                       <td className="py-2 font-medium">{init.name}</td>
                       <td className="py-2 text-slate-400">{init.agent}</td>
-                      <td className="py-2 text-center font-mono text-blue-400">{init.phase}</td>
+                      <td className="py-2 text-center font-mono text-white">{init.phase}</td>
                       <td className="py-2 text-center"><StatusBadge status={init.status === "planned" ? "on_track" : init.status} /></td>
                       <td className="py-2 text-slate-400">{init.notes}</td>
                     </tr>
@@ -880,7 +880,7 @@ export default function Dashboard() {
                       <tr key={i} className="border-b border-slate-800">
                         <td className="py-2 font-medium">{p.partner}</td>
                         <td className="py-2 text-slate-400">{p.value}</td>
-                        <td className="py-2 text-center font-mono text-blue-400">{p.timeline}</td>
+                        <td className="py-2 text-center font-mono text-white">{p.timeline}</td>
                         <td className="py-2 text-center"><StatusBadge status={p.status === "research" ? "on_track" : p.status === "aspirational" ? "at_risk" : p.status === "planned" ? "on_track" : "hit"} /></td>
                         <td className="py-2 text-slate-400">{p.revenue}</td>
                       </tr>
@@ -896,7 +896,7 @@ export default function Dashboard() {
         {tab === 8 && (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-blue-900/30 to-slate-800 rounded-xl border border-blue-500/30 p-8 text-center">
-              <p className="text-sm text-blue-400 uppercase tracking-wide mb-2">The Ask</p>
+              <p className="text-sm text-white uppercase tracking-wide mb-2">The Ask</p>
               <p className="text-xl font-light text-white italic">
                 &quot;We are raising <span className="font-bold text-emerald-400">{currency(a.raise)}</span> to secure our first <span className="font-bold text-emerald-400">{num(calc.paidM6)}+</span> paid subscribers and validate unit economics within 6 months.&quot;
               </p>
@@ -921,7 +921,7 @@ export default function Dashboard() {
                         <span className="text-xs font-mono text-white">{currency(f.amt)}</span>
                       </div>
                     </div>
-                    <div className="w-12 text-right text-sm font-mono text-blue-400">{f.pct}%</div>
+                    <div className="w-12 text-right text-sm font-mono text-white">{f.pct}%</div>
                   </div>
                 ))}
               </div>
