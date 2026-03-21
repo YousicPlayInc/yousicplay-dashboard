@@ -30,6 +30,12 @@ export default function Dashboard() {
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const toggleEdit = (key: string) => setEditing(prev => ({ ...prev, [key]: !prev[key] }));
 
+  // ─── Undo / Redo ────────────────────────────────────────────────────
+  const [history, setHistory] = useState<string[]>([]);
+  const [future, setFuture] = useState<string[]>([]);
+  const aRef = useRef(a);
+  useEffect(() => { aRef.current = a; }, [a]);
+
   // ─── Supabase Load ─────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
@@ -84,6 +90,52 @@ export default function Dashboard() {
     }, 500);
   }, []);
 
+  // Persist all assumptions to Supabase at once
+  const persistAll = useCallback((assumptions: Assumptions) => {
+    for (const key of SCALAR_KEYS) {
+      persistKey(key, String((assumptions as Record<string, unknown>)[key]));
+    }
+    persistKey("_founders_json", JSON.stringify(assumptions.founders));
+    persistKey("_phases_json", JSON.stringify(assumptions.phases));
+    persistKey("_partnerships_json", JSON.stringify(assumptions.partnerships));
+  }, [persistKey]);
+
+  // Snapshot current state before a big action
+  const pushHistory = useCallback(() => {
+    const snapshot = JSON.stringify(aRef.current);
+    setHistory(h => [...h.slice(-49), snapshot]); // keep max 50
+    setFuture([]); // clear redo stack
+  }, []);
+
+  const undo = useCallback(() => {
+    setHistory(h => {
+      if (h.length === 0) return h;
+      const prev = JSON.parse(h[h.length - 1]) as Assumptions;
+      setFuture(f => [...f, JSON.stringify(aRef.current)]);
+      setA(prev);
+      persistAll(prev);
+      return h.slice(0, -1);
+    });
+  }, [persistAll]);
+
+  const redo = useCallback(() => {
+    setFuture(f => {
+      if (f.length === 0) return f;
+      const next = JSON.parse(f[f.length - 1]) as Assumptions;
+      setHistory(h => [...h, JSON.stringify(aRef.current)]);
+      setA(next);
+      persistAll(next);
+      return f.slice(0, -1);
+    });
+  }, [persistAll]);
+
+  const resetDefaults = useCallback(() => {
+    pushHistory();
+    const defaults = JSON.parse(JSON.stringify(DEFAULT_ASSUMPTIONS)) as Assumptions;
+    setA(defaults);
+    persistAll(defaults);
+  }, [pushHistory, persistAll]);
+
   // Update a scalar assumption
   const u = useCallback(
     (key: string) => (val: number) => {
@@ -122,8 +174,17 @@ export default function Dashboard() {
   const calc = useMemo(() => computeAll(a), [a]);
   const reverse = useMemo(() => reverseEngineer(a), [a]);
 
+  // Runway: months until cash runs out (from quarterly P&L)
+  const runway = useMemo(() => {
+    for (let i = 0; i < calc.cashFlow.length; i++) {
+      if (calc.cashFlow[i].cash < 0) return (i) * 3; // quarter before going negative
+    }
+    return 18; // survives all 18 months
+  }, [calc]);
+
   // Apply recommended budgets and raise from reverse engineering
   const applyRecommended = useCallback(() => {
+    pushHistory(); // snapshot before big change
     // Scale marketing budgets
     updatePhases((phases) => {
       for (let i = 0; i < phases.length; i++) {
@@ -133,7 +194,7 @@ export default function Dashboard() {
     });
     // Set raise
     u("raise")(reverse.requiredRaise);
-  }, [reverse, updatePhases, u]);
+  }, [pushHistory, reverse, updatePhases, u]);
 
   const PHASE_LABELS = a.phases.map((p, i) => {
     const startMonth = a.phases.slice(0, i).reduce((s, pp) => s + pp.months, 0);
@@ -154,11 +215,19 @@ export default function Dashboard() {
       <div className="bg-gradient-to-r from-slate-900 via-blue-900/40 to-slate-900 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Yousic Play</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Yousic Play</h1>
+              <div className="flex items-center gap-1">
+                <button onClick={undo} disabled={history.length === 0} className="px-2 py-1 text-xs rounded border border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Undo">Undo</button>
+                <button onClick={redo} disabled={future.length === 0} className="px-2 py-1 text-xs rounded border border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title="Redo">Redo</button>
+                <button onClick={resetDefaults} className="px-2 py-1 text-xs rounded border border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 transition-colors" title="Reset to defaults">Reset</button>
+              </div>
+            </div>
             <p className="text-xs sm:text-sm text-slate-400">Pre-Seed Financial Model &amp; Launch Dashboard</p>
           </div>
-          <div className="grid grid-cols-4 gap-3 sm:gap-4 text-center">
+          <div className="grid grid-cols-5 gap-2 sm:gap-4 text-center">
             <Metric label="Raise" value={currency(a.raise)} />
+            <Metric label="Runway" value={`${runway}mo`} good={runway >= 18} />
             <Metric label="18-Mo ARR" value={currency(calc.arrM18)} good />
             <Metric label="Agents" value={calc.totalAgents} />
             <Metric label="Break-Even" value={`M${calc.breakEvenMonth}`} good />
@@ -381,7 +450,7 @@ export default function Dashboard() {
                 {editing[`founder_${fi}`] && (
                   <div className="flex items-center gap-2 mb-3">
                     <TextInput small value={founder.title} onChange={(val) => updateFounders(f => { f[fi].title = val; return f; })} />
-                    <RemoveButton onClick={() => { updateFounders(f => f.filter((_, i) => i !== fi)); toggleEdit(`founder_${fi}`); }} />
+                    <RemoveButton onClick={() => { pushHistory(); updateFounders(f => f.filter((_, i) => i !== fi)); toggleEdit(`founder_${fi}`); }} />
                   </div>
                 )}
                 <div className="overflow-x-auto -mx-4 px-4"><table className="w-full text-sm min-w-[400px]">
@@ -396,7 +465,7 @@ export default function Dashboard() {
                             <td className="py-1"><TextInput small value={ag.name} onChange={(val) => updateFounders(f => { f[fi].agents[ai].name = val; return f; })} /></td>
                             <td className="py-1"><TextInput small value={ag.fn} onChange={(val) => updateFounders(f => { f[fi].agents[ai].fn = val; return f; })} /></td>
                             <td className="py-1 w-24"><Input small value={ag.cost} onChange={(val) => updateFounders(f => { f[fi].agents[ai].cost = val; return f; })} prefix="$" /></td>
-                            <td className="py-1"><RemoveButton onClick={() => updateFounders(f => { f[fi].agents.splice(ai, 1); return f; })} /></td>
+                            <td className="py-1"><RemoveButton onClick={() => { pushHistory(); updateFounders(f => { f[fi].agents.splice(ai, 1); return f; }); }} /></td>
                           </>
                         ) : (
                           <>
@@ -416,14 +485,14 @@ export default function Dashboard() {
                 </table></div>
                 {editing[`founder_${fi}`] && (
                   <div className="mt-2">
-                    <AddButton label="Add Agent" onClick={() => updateFounders(f => { f[fi].agents.push({ name: "New Agent", fn: "Function", cost: 50 }); return f; })} />
+                    <AddButton label="Add Agent" onClick={() => { pushHistory(); updateFounders(f => { f[fi].agents.push({ name: "New Agent", fn: "Function", cost: 50 }); return f; }); }} />
                   </div>
                 )}
               </Card>
             ))}
 
             {editing.addFounder !== false && (
-              <AddButton label="Add Founder" onClick={() => updateFounders(f => [...f, { id: uid(), title: `Founder ${f.length + 1}`, agents: [{ name: "New Agent", fn: "Function", cost: 50 }] }])} />
+              <AddButton label="Add Founder" onClick={() => { pushHistory(); updateFounders(f => [...f, { id: uid(), title: `Founder ${f.length + 1}`, agents: [{ name: "New Agent", fn: "Function", cost: 50 }] }]); }} />
             )}
           </div>
         )}
@@ -578,7 +647,7 @@ export default function Dashboard() {
                             <td className="py-1"><TextInput small value={g.agent} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].agent = val; return p; })} /></td>
                             <td className="py-1"><TextInput small value={g.metric} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].metric = val; return p; })} /></td>
                             <td className="py-1 w-24"><TextInput small value={g.budget} onChange={(val) => updatePhases(p => { p[pi].gtmMotions[gi].budget = val; return p; })} /></td>
-                            <td className="py-1"><RemoveButton onClick={() => updatePhases(p => { p[pi].gtmMotions.splice(gi, 1); return p; })} /></td>
+                            <td className="py-1"><RemoveButton onClick={() => { pushHistory(); updatePhases(p => { p[pi].gtmMotions.splice(gi, 1); return p; }); }} /></td>
                           </>
                         ) : (
                           <>
@@ -595,18 +664,18 @@ export default function Dashboard() {
                 </table></div>
                 {editing[`gtm_${pi}`] && (
                   <div className="mt-2 flex gap-2">
-                    <AddButton label="Add Motion" onClick={() => updatePhases(p => { p[pi].gtmMotions.push({ id: uid(), motion: "New Motion", channel: "", agent: "", metric: "", budget: "$0" }); return p; })} />
-                    <RemoveButton onClick={() => updatePhases(p => p.filter((_, i) => i !== pi))} />
+                    <AddButton label="Add Motion" onClick={() => { pushHistory(); updatePhases(p => { p[pi].gtmMotions.push({ id: uid(), motion: "New Motion", channel: "", agent: "", metric: "", budget: "$0" }); return p; }); }} />
+                    <RemoveButton onClick={() => { pushHistory(); updatePhases(p => p.filter((_, i) => i !== pi)); }} />
                   </div>
                 )}
               </Card>
             ))}
 
-            <AddButton label="Add Phase" onClick={() => updatePhases(p => [...p, {
+            <AddButton label="Add Phase" onClick={() => { pushHistory(); updatePhases(p => [...p, {
               id: uid(), label: `Phase ${p.length + 1}`, months: 6, monthlyMktBudget: 5000, founderPayMonthly: 15000, infraMonthly: 500,
               channels: [{ channelId: "organic_seo", label: "Organic / SEO", budgetPct: 0.30, cpa: 0.50, signupToActiveRate: 0.35 }, { channelId: "paid_social", label: "Paid Social", budgetPct: 0.70, cpa: 6.00, signupToActiveRate: 0.25 }],
               gtmMotions: [],
-            }])} />
+            }]); }} />
           </div>
         )}
 
@@ -644,7 +713,7 @@ export default function Dashboard() {
                               <td className="py-1 text-right font-mono text-slate-300">{currency(cr?.spend || 0)}</td>
                               <td className="py-1 text-right font-mono">{num(cr?.signups || 0)}</td>
                               <td className="py-1 text-right font-mono text-emerald-400">{num(cr?.activeUsers || 0)}</td>
-                              <td className="py-1"><RemoveButton onClick={() => updatePhases(p => { p[pi].channels.splice(ci, 1); return p; })} /></td>
+                              <td className="py-1"><RemoveButton onClick={() => { pushHistory(); updatePhases(p => { p[pi].channels.splice(ci, 1); return p; }); }} /></td>
                             </>
                           ) : (
                             <>
@@ -664,7 +733,7 @@ export default function Dashboard() {
                 </table></div>
                 {editing[`channels_${pi}`] && (
                   <div className="mt-2 flex gap-2">
-                    <AddButton label="Add Channel" onClick={() => updatePhases(p => { p[pi].channels.push({ channelId: uid(), label: "New Channel", budgetPct: 0.10, cpa: 5.00, signupToActiveRate: 0.25 }); return p; })} />
+                    <AddButton label="Add Channel" onClick={() => { pushHistory(); updatePhases(p => { p[pi].channels.push({ channelId: uid(), label: "New Channel", budgetPct: 0.10, cpa: 5.00, signupToActiveRate: 0.25 }); return p; }); }} />
                   </div>
                 )}
                 <div className="mt-2 text-xs text-slate-400">
@@ -695,7 +764,7 @@ export default function Dashboard() {
                           <td className="py-1"><Input small value={p.usersM6} onChange={(val) => updatePartnerships(ps => { ps[pi].usersM6 = val; return ps; })} /></td>
                           <td className="py-1"><Input small value={p.usersM12} onChange={(val) => updatePartnerships(ps => { ps[pi].usersM12 = val; return ps; })} /></td>
                           <td className="py-1"><Input small value={p.usersM18} onChange={(val) => updatePartnerships(ps => { ps[pi].usersM18 = val; return ps; })} /></td>
-                          <td className="py-1"><RemoveButton onClick={() => updatePartnerships(ps => ps.filter((_, i) => i !== pi))} /></td>
+                          <td className="py-1"><RemoveButton onClick={() => { pushHistory(); updatePartnerships(ps => ps.filter((_, i) => i !== pi)); }} /></td>
                         </>
                       ) : (
                         <>
@@ -720,7 +789,7 @@ export default function Dashboard() {
               </table></div>
               {editing.partnerships && (
                 <div className="mt-2">
-                  <AddButton label="Add Partnership" onClick={() => updatePartnerships(ps => [...ps, { id: uid(), partner: "New Partner", category: "Category", usersM6: 0, usersM12: 0, usersM18: 0, status: "on_track" }])} />
+                  <AddButton label="Add Partnership" onClick={() => { pushHistory(); updatePartnerships(ps => [...ps, { id: uid(), partner: "New Partner", category: "Category", usersM6: 0, usersM12: 0, usersM18: 0, status: "on_track" }]); }} />
                 </div>
               )}
             </Card>
