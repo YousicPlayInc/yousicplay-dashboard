@@ -1,8 +1,8 @@
--- Create the assumptions table
+-- Create the assumptions table (value is text to support both numbers and JSON)
 create table if not exists assumptions (
   id uuid primary key default gen_random_uuid(),
   key text unique not null,
-  value numeric not null,
+  value text not null,
   updated_by text,
   updated_at timestamp with time zone default now()
 );
@@ -10,34 +10,23 @@ create table if not exists assumptions (
 -- Enable real-time
 alter publication supabase_realtime add table assumptions;
 
--- Seed default values
+-- Seed default scalar values
 insert into assumptions (key, value) values
-  ('raise', 150000),
-  ('proMonthly', 14.99),
-  ('proAnnual', 79.99),
-  ('studioMonthly', 24.99),
-  ('studioAnnual', 149.99),
-  ('convRate', 0.04),
-  ('churn', 0.12),
-  ('viralK', 0.6),
-  ('founders', 4),
-  ('agentsPerFounder', 10),
-  ('usersM6', 8000),
-  ('usersM12', 40000),
-  ('usersM18', 120000),
-  ('activationRate', 0.30),
-  ('tokenCostPerUserM6', 0.64),
-  ('tokenCostPerUserM12', 0.49),
-  ('tokenCostPerUserM18', 0.46),
-  ('agentCostMo', 2450),
-  ('founderPayM1_6', 5000),
-  ('founderPayM7_12', 9000),
-  ('founderPayM13_18', 15000),
-  ('mktBudgetM1_6', 1000),
-  ('mktBudgetM7_12', 2500),
-  ('mktBudgetM13_18', 5000),
-  ('wowM6', 0.05),
-  ('wowM12', 0.03),
-  ('wowM18', 0.02),
-  ('priceDecline18mo', 0.50)
+  ('raise', '150000'),
+  ('proMonthly', '14.99'),
+  ('proAnnual', '79.99'),
+  ('studioMonthly', '24.99'),
+  ('studioAnnual', '149.99'),
+  ('convRate', '0.04'),
+  ('churn', '0.12'),
+  ('viralK', '0.6'),
+  ('tokenCostPerUserM6', '0.64'),
+  ('tokenCostPerUserM12', '0.49'),
+  ('tokenCostPerUserM18', '0.46'),
+  ('priceDecline18mo', '0.50')
 on conflict (key) do nothing;
+
+-- RLS policies for anonymous access
+create policy "Allow anonymous read" on assumptions for select using (true);
+create policy "Allow anonymous insert" on assumptions for insert with check (true);
+create policy "Allow anonymous update" on assumptions for update using (true);

@@ -69,6 +69,58 @@ export function Input({
   );
 }
 
+export function TextInput({
+  label,
+  value,
+  onChange,
+  small = false,
+  placeholder = "",
+}: {
+  label?: string;
+  value: string;
+  onChange: (val: string) => void;
+  small?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div className={`flex flex-col ${small ? "gap-0.5" : "gap-1"}`}>
+      {label && <label className="text-xs text-slate-400 font-medium">{label}</label>}
+      <div className="flex items-center bg-slate-950 border border-slate-600 rounded px-2 py-1">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="bg-transparent text-amber-400 text-sm w-full outline-none"
+        />
+      </div>
+    </div>
+  );
+}
+
+export function AddButton({ onClick, label = "Add" }: { onClick: () => void; label?: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-emerald-400 border border-emerald-400/30 rounded hover:bg-emerald-400/10 transition-colors"
+    >
+      <span>+</span> {label}
+    </button>
+  );
+}
+
+export function RemoveButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-red-400/60 hover:text-red-400 text-xs px-1.5 py-0.5 rounded hover:bg-red-400/10 transition-colors"
+      title="Remove"
+    >
+      ×
+    </button>
+  );
+}
+
 export function StatusBadge({ status }: { status: string }) {
   const s: Record<string, string> = {
     hit: "bg-blue-400/20 text-emerald-400",

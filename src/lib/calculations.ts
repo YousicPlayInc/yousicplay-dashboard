@@ -67,6 +67,8 @@ export interface Calculations {
   tokenM18: number;
   tokenAdj18: number;
   totalAgents: number;
+  founderCount: number;
+  totalAgentCostMo: number;
   tradHeadcount: number;
   tradCost: number;
   cashFlow: QuarterData[];
@@ -202,8 +204,10 @@ export function computeAll(a: Assumptions): Calculations {
   const tokenM18 = mauM18 * a.tokenCostPerUserM18;
   const tokenAdj18 = tokenM18 * a.priceDecline18mo;
 
-  // Team
-  const totalAgents = a.founders * a.agentsPerFounder;
+  // Team (derived from founders array)
+  const totalAgents = a.founders.reduce((s, f) => s + f.agents.length, 0);
+  const founderCount = a.founders.length;
+  const totalAgentCostMo = a.founders.reduce((s, f) => s + f.agents.reduce((s2, ag) => s2 + ag.cost, 0), 0);
   const tradHeadcount = 14;
   const tradCost = 1500000;
 
@@ -275,7 +279,7 @@ export function computeAll(a: Assumptions): Calculations {
     blendedArpuM6: arpuM6, blendedArpuM12: arpuM12, blendedArpuM18: arpuM18,
     totalSignupsM6: cumSignupsM6, totalSignupsM12: cumSignupsM12, totalSignupsM18: cumSignupsM18,
     tokenM6, tokenM12, tokenM18, tokenAdj18,
-    totalAgents, tradHeadcount, tradCost,
+    totalAgents, founderCount, totalAgentCostMo, tradHeadcount, tradCost,
     cashFlow: quarters,
     totalRev, totalCost: totalCostSum,
     ltv, cac, ltvCac: cac > 0 ? ltv / cac : 0,
