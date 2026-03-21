@@ -208,31 +208,39 @@ export default function Dashboard() {
     });
   }, [persistKey]);
 
-  // UOF rebalancing: when one field changes, redistribute the rest proportionally to keep total = 100%
+  // UOF rebalancing with locks: only unlocked categories absorb the difference
   const UOF_KEYS = ["uofMarketing", "uofFounderPay", "uofInfra", "uofAgents", "uofReserve"] as const;
-  const updateUof = useCallback((changedKey: typeof UOF_KEYS[number], newPct: number) => {
+  type UofKey = typeof UOF_KEYS[number];
+  const [uofLocks, setUofLocks] = useState<Record<UofKey, boolean>>({
+    uofMarketing: false, uofFounderPay: false, uofInfra: false, uofAgents: false, uofReserve: false,
+  });
+  const toggleUofLock = (key: UofKey) => setUofLocks(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const updateUof = useCallback((changedKey: UofKey, newPct: number) => {
     const clamped = Math.max(0, Math.min(1, newPct));
     setA((prev) => {
-      const others = UOF_KEYS.filter(k => k !== changedKey);
-      const othersSum = others.reduce((s, k) => s + prev[k], 0);
-      const remaining = Math.max(0, 1 - clamped);
       const next = { ...prev, [changedKey]: clamped };
-      if (othersSum > 0) {
-        // Scale others proportionally
-        for (const k of others) {
-          (next as Record<string, number>)[k] = Math.round((prev[k] / othersSum) * remaining * 100) / 100;
+      // Only unlocked keys (excluding the one being changed) absorb the difference
+      const adjustable = UOF_KEYS.filter(k => k !== changedKey && !uofLocks[k]);
+      const lockedSum = UOF_KEYS.filter(k => k !== changedKey && uofLocks[k]).reduce((s, k) => s + prev[k], 0);
+      const remaining = Math.max(0, 1 - clamped - lockedSum);
+      const adjustableSum = adjustable.reduce((s, k) => s + prev[k], 0);
+
+      if (adjustable.length === 0) {
+        // Nothing to adjust — just set the value (will exceed 100%)
+      } else if (adjustableSum > 0) {
+        for (const k of adjustable) {
+          (next as Record<string, number>)[k] = Math.round((prev[k] / adjustableSum) * remaining * 100) / 100;
         }
       } else {
-        // All others are 0 — distribute evenly
-        for (const k of others) {
-          (next as Record<string, number>)[k] = Math.round((remaining / others.length) * 100) / 100;
+        for (const k of adjustable) {
+          (next as Record<string, number>)[k] = Math.round((remaining / adjustable.length) * 100) / 100;
         }
       }
-      // Persist all 5 UOF keys
       for (const k of UOF_KEYS) persistKey(k, String(next[k]));
       return next;
     });
-  }, [persistKey]);
+  }, [persistKey, uofLocks]);
 
   const calc = useMemo(() => computeAll(a), [a]);
   const reverse = useMemo(() => reverseEngineer(a), [a]);
@@ -448,13 +456,29 @@ export default function Dashboard() {
             </Card>
 
             <Card title="Use of Funds">
-              <p className="text-xs text-slate-400 mb-3">How the raise is allocated. Percentages drive quarterly budgets — raise more → spend more proportionally.</p>
+              <p className="text-xs text-slate-400 mb-3">How the raise is allocated. Lock categories to pin their values, then adjust others freely.</p>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <Input label="Marketing" value={(a.uofMarketing * 100).toFixed(0)} onChange={(v) => updateUof("uofMarketing", v / 100)} suffix="%" />
-                <Input label="Founder Pay" value={(a.uofFounderPay * 100).toFixed(0)} onChange={(v) => updateUof("uofFounderPay", v / 100)} suffix="%" />
-                <Input label="Infrastructure" value={(a.uofInfra * 100).toFixed(0)} onChange={(v) => updateUof("uofInfra", v / 100)} suffix="%" />
-                <Input label="AI Agents" value={(a.uofAgents * 100).toFixed(0)} onChange={(v) => updateUof("uofAgents", v / 100)} suffix="%" />
-                <Input label="Reserve" value={(a.uofReserve * 100).toFixed(0)} onChange={(v) => updateUof("uofReserve", v / 100)} suffix="%" />
+                {([
+                  ["uofMarketing", "Marketing"],
+                  ["uofFounderPay", "Founder Pay"],
+                  ["uofInfra", "Infrastructure"],
+                  ["uofAgents", "AI Agents"],
+                  ["uofReserve", "Reserve"],
+                ] as [UofKey, string][]).map(([key, label]) => (
+                  <div key={key}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-slate-400">{label}</span>
+                      <button
+                        onClick={() => toggleUofLock(key)}
+                        className={`text-xs px-1.5 py-0.5 rounded transition-colors ${uofLocks[key] ? "bg-amber-500/20 text-amber-400" : "bg-slate-700/50 text-slate-500 hover:text-slate-300"}`}
+                        title={uofLocks[key] ? "Locked — click to unlock" : "Unlocked — click to lock"}
+                      >
+                        {uofLocks[key] ? "🔒" : "🔓"}
+                      </button>
+                    </div>
+                    <Input label="" value={(a[key] * 100).toFixed(0)} onChange={(v) => updateUof(key, v / 100)} suffix="%" />
+                  </div>
+                ))}
               </div>
               {(() => {
                 const totalPct = a.uofMarketing + a.uofFounderPay + a.uofInfra + a.uofAgents + a.uofReserve;
