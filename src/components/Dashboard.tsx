@@ -208,6 +208,32 @@ export default function Dashboard() {
     });
   }, [persistKey]);
 
+  // UOF rebalancing: when one field changes, redistribute the rest proportionally to keep total = 100%
+  const UOF_KEYS = ["uofMarketing", "uofFounderPay", "uofInfra", "uofAgents", "uofReserve"] as const;
+  const updateUof = useCallback((changedKey: typeof UOF_KEYS[number], newPct: number) => {
+    const clamped = Math.max(0, Math.min(1, newPct));
+    setA((prev) => {
+      const others = UOF_KEYS.filter(k => k !== changedKey);
+      const othersSum = others.reduce((s, k) => s + prev[k], 0);
+      const remaining = Math.max(0, 1 - clamped);
+      const next = { ...prev, [changedKey]: clamped };
+      if (othersSum > 0) {
+        // Scale others proportionally
+        for (const k of others) {
+          (next as Record<string, number>)[k] = Math.round((prev[k] / othersSum) * remaining * 100) / 100;
+        }
+      } else {
+        // All others are 0 — distribute evenly
+        for (const k of others) {
+          (next as Record<string, number>)[k] = Math.round((remaining / others.length) * 100) / 100;
+        }
+      }
+      // Persist all 5 UOF keys
+      for (const k of UOF_KEYS) persistKey(k, String(next[k]));
+      return next;
+    });
+  }, [persistKey]);
+
   const calc = useMemo(() => computeAll(a), [a]);
   const reverse = useMemo(() => reverseEngineer(a), [a]);
 
@@ -424,11 +450,11 @@ export default function Dashboard() {
             <Card title="Use of Funds">
               <p className="text-xs text-slate-400 mb-3">How the raise is allocated. Percentages drive quarterly budgets — raise more → spend more proportionally.</p>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <Input label="Marketing" value={(a.uofMarketing * 100).toFixed(0)} onChange={(v) => u("uofMarketing")(v / 100)} suffix="%" />
-                <Input label="Founder Pay" value={(a.uofFounderPay * 100).toFixed(0)} onChange={(v) => u("uofFounderPay")(v / 100)} suffix="%" />
-                <Input label="Infrastructure" value={(a.uofInfra * 100).toFixed(0)} onChange={(v) => u("uofInfra")(v / 100)} suffix="%" />
-                <Input label="AI Agents" value={(a.uofAgents * 100).toFixed(0)} onChange={(v) => u("uofAgents")(v / 100)} suffix="%" />
-                <Input label="Reserve" value={(a.uofReserve * 100).toFixed(0)} onChange={(v) => u("uofReserve")(v / 100)} suffix="%" />
+                <Input label="Marketing" value={(a.uofMarketing * 100).toFixed(0)} onChange={(v) => updateUof("uofMarketing", v / 100)} suffix="%" />
+                <Input label="Founder Pay" value={(a.uofFounderPay * 100).toFixed(0)} onChange={(v) => updateUof("uofFounderPay", v / 100)} suffix="%" />
+                <Input label="Infrastructure" value={(a.uofInfra * 100).toFixed(0)} onChange={(v) => updateUof("uofInfra", v / 100)} suffix="%" />
+                <Input label="AI Agents" value={(a.uofAgents * 100).toFixed(0)} onChange={(v) => updateUof("uofAgents", v / 100)} suffix="%" />
+                <Input label="Reserve" value={(a.uofReserve * 100).toFixed(0)} onChange={(v) => updateUof("uofReserve", v / 100)} suffix="%" />
               </div>
               {(() => {
                 const totalPct = a.uofMarketing + a.uofFounderPay + a.uofInfra + a.uofAgents + a.uofReserve;
@@ -455,11 +481,7 @@ export default function Dashboard() {
                         </div>
                       ))}
                     </div>
-                    {Math.abs(totalPct - 1) > 0.01 && (
-                      <p className="mt-2 text-xs text-amber-400">
-                        Total: {(totalPct * 100).toFixed(0)}% — {totalPct > 1 ? "over" : "under"} 100%
-                      </p>
-                    )}
+                    <p className="mt-2 text-xs text-slate-500">Total: 100% — adjusting one category rebalances the others.</p>
                   </div>
                 );
               })()}
